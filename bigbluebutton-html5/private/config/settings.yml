@@ -92,7 +92,7 @@ public:
     # speech API, which involves sending voice data to third-party servers!
     # https://developer.mozilla.org/en-US/docs/Web/API/Web_Speech_API/Using_the_Web_Speech_API#speech_recognition
     audioCaptions:
-      enabled: false
+      enabled: true
       alwaysVisible: false
       # mobile: <Boolean> - controls speech transcription availability on mobile
       mobile: false
@@ -103,7 +103,7 @@ public:
         # Google: https://cloud.google.com/speech-to-text/docs/speech-to-text-supported-languages
         # Gladia: https://docs.gladia.io/chapters/speech-to-text-api/pages/languages#supported-languages
         available:
-        # - de-DE
+          - de-DE
           - en-US
           - es-ES
           - fr-FR
@@ -124,6 +124,27 @@ public:
         # [en-US, es-ES, pt-BR,...]: to set a specific locale
         # disabled: to set disabled
         locale: disabled
+      # Azure Translator configuration for real-time caption translation
+      translation:
+        enabled: true
+        provider: azure
+        defaultEnabled: true
+        supportedLanguages:
+          - locale: en-US
+            name: English
+            azureCode: en
+          - locale: es-ES
+            name: Spanish
+            azureCode: es
+          - locale: pt-BR
+            name: Portuguese
+            azureCode: pt
+          - locale: de-DE
+            name: German
+            azureCode: de
+          - locale: fr-FR
+            name: French
+            azureCode: fr
     mutedAlert:
       enabled: true
       interval: 200
