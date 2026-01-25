@@ -100,6 +100,7 @@ export interface User {
   cameras: Array<Cameras>;
   speechLocale: string;
   captionLocale: string;
+  speakingLanguage: string;
   authed: boolean;
   size: number;
   away: boolean;
