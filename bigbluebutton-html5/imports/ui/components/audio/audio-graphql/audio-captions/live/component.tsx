@@ -63,15 +63,22 @@ const AudioCaptionsLiveContainer: React.FC = () => {
     data: currentUser,
   } = useCurrentUser((u) => ({
     captionLocale: u.captionLocale,
+    odUserId: u.userId,
   }));
   const [audioCaptionsEnable] = useAudioCaptionEnable();
+
+  // Get current user ID for filtering out self-captions
+  const currentUserId = currentUser?.odUserId ?? '';
 
   const {
     data: AudioCaptionsLiveData,
     loading: AudioCaptionsLiveLoading,
     error: AudioCaptionsLiveError,
   } = useDeduplicatedSubscription<getCaptions>(GET_CAPTIONS, {
-    variables: { locale: currentUser?.captionLocale ?? 'en-US' },
+    variables: {
+      locale: currentUser?.captionLocale ?? 'en-US',
+      excludeUserId: currentUserId,
+    },
     skip: !audioCaptionsEnable || !currentUser?.captionLocale,
   });
 
