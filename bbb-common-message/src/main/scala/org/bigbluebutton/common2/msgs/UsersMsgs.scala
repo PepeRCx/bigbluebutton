@@ -472,6 +472,14 @@ object UserCaptionLocaleChangedEvtMsg { val NAME = "UserCaptionLocaleChangedEvtM
 case class UserCaptionLocaleChangedEvtMsg(header: BbbClientMsgHeader, body: UserCaptionLocaleChangedEvtMsgBody) extends BbbCoreMsg
 case class UserCaptionLocaleChangedEvtMsgBody(locale: String, provider: String)
 
+object SetUserSpeakingLanguageReqMsg { val NAME = "SetUserSpeakingLanguageReqMsg" }
+case class SetUserSpeakingLanguageReqMsg(header: BbbClientMsgHeader, body: SetUserSpeakingLanguageReqMsgBody) extends StandardMsg
+case class SetUserSpeakingLanguageReqMsgBody(locale: String)
+
+object UserSpeakingLanguageChangedEvtMsg { val NAME = "UserSpeakingLanguageChangedEvtMsg" }
+case class UserSpeakingLanguageChangedEvtMsg(header: BbbClientMsgHeader, body: UserSpeakingLanguageChangedEvtMsgBody) extends BbbCoreMsg
+case class UserSpeakingLanguageChangedEvtMsgBody(locale: String)
+
 object SetUserSpeechOptionsReqMsg { val NAME = "SetUserSpeechOptionsReqMsg" }
 case class SetUserSpeechOptionsReqMsg(header: BbbClientMsgHeader, body: SetUserSpeechOptionsReqMsgBody) extends StandardMsg
 case class SetUserSpeechOptionsReqMsgBody(partialUtterances: Boolean, minUtteranceLength: Int)
