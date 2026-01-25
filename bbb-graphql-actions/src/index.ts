@@ -27,37 +27,42 @@ app.post('/', async (req: Request, res: Response) => {
       console.debug(sessionVariables);
     }
 
-    // Build message using received information.
-    const {
-      eventName,
-      routing,
-      header,
-      body
-    } = await redisMessageFactory.buildMessage(sessionVariables, actionName, input);
+    // Build messages using received information (may return multiple messages).
+    const messages = await redisMessageFactory.buildMessage(sessionVariables, actionName, input);
 
-    // Construct payload to be sent to Redis.
-    const redisPayload = {
-      envelope: {
-        name: eventName,
+    // Publish all messages to Redis
+    for (const message of messages) {
+      const {
+        eventName,
         routing,
-        timestamp: Date.now(),
-      },
-      core: { header, body },
-    };
+        header,
+        body
+      } = message;
 
-    // If in debug mode, log the input and output information.
-    if(DEBUG) {
-      console.log(util.inspect({
-        input: { actionName, input, sessionVariables },
-        output: { redisPayload },
-      }, { depth: null, colors: true }));
-    }
+      // Construct payload to be sent to Redis.
+      const redisPayload = {
+        envelope: {
+          name: eventName,
+          routing,
+          timestamp: Date.now(),
+        },
+        core: { header, body },
+      };
 
-    // Publish the constructed payload to Redis.
-    if(actionName == 'userThirdPartyInfoResquest') {
-      await redisClient.publish('to-third-party-redis-channel', JSON.stringify(redisPayload));
-    } else {
-      await redisClient.publish('to-akka-apps-redis-channel', JSON.stringify(redisPayload));
+      // If in debug mode, log the input and output information.
+      if(DEBUG) {
+        console.log(util.inspect({
+          input: { actionName, input, sessionVariables },
+          output: { redisPayload },
+        }, { depth: null, colors: true }));
+      }
+
+      // Publish the constructed payload to Redis.
+      if(actionName == 'userThirdPartyInfoResquest') {
+        await redisClient.publish('to-third-party-redis-channel', JSON.stringify(redisPayload));
+      } else {
+        await redisClient.publish('to-akka-apps-redis-channel', JSON.stringify(redisPayload));
+      }
     }
 
     // Send a success response.

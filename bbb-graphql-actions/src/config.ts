@@ -5,3 +5,8 @@ export const SERVER_HOST = process.env.SERVER_HOST || '127.0.0.1';
 export const SERVER_PORT = Number(process.env.SERVER_PORT) || 8093;
 export const MAX_BODY_SIZE = Number(process.env.MAX_BODY_SIZE) || 10485760; // 10MB
 export const DEBUG = false;
+
+// Azure Translator Configuration
+export const AZURE_TRANSLATOR_ENABLED = process.env.AZURE_TRANSLATOR_ENABLED !== 'false';
+export const AZURE_TRANSLATOR_ENDPOINT = process.env.AZURE_TRANSLATOR_ENDPOINT || '';
+export const AZURE_TRANSLATOR_KEY = process.env.AZURE_TRANSLATOR_KEY || '';
