@@ -27,6 +27,7 @@ case class UserStateDbModel(
     locked:                       Boolean = false,
     speechLocale:                 String,
     captionLocale:                String,
+    speakingLanguage:             String,
     inactivityWarningDisplay:     Boolean = false,
     inactivityWarningTimeoutSecs: Option[Long],
     echoTestRunningAt:            Option[java.sql.Timestamp],
@@ -35,7 +36,7 @@ case class UserStateDbModel(
 class UserStateDbTableDef(tag: Tag) extends Table[UserStateDbModel](tag, None, "user") {
   override def * = (
     meetingId, userId,away,raiseHand,guestStatus,guestStatusSetByModerator,guestLobbyMessage,mobile,clientType,disconnected,
-    expired,ejectColumns,presenter,pinned,locked,speechLocale, captionLocale,
+    expired,ejectColumns,presenter,pinned,locked,speechLocale, captionLocale, speakingLanguage,
     inactivityWarningDisplay, inactivityWarningTimeoutSecs, echoTestRunningAt) <> (UserStateDbModel.tupled, UserStateDbModel.unapply)
   val meetingId = column[String]("meetingId", O.PrimaryKey)
   val userId = column[String]("userId", O.PrimaryKey)
@@ -58,6 +59,7 @@ class UserStateDbTableDef(tag: Tag) extends Table[UserStateDbModel](tag, None, "
   val locked = column[Boolean]("locked")
   val speechLocale = column[String]("speechLocale")
   val captionLocale = column[String]("captionLocale")
+  val speakingLanguage = column[String]("speakingLanguage")
   val inactivityWarningDisplay = column[Boolean]("inactivityWarningDisplay")
   val inactivityWarningTimeoutSecs = column[Option[Long]]("inactivityWarningTimeoutSecs")
   val echoTestRunningAt = column[Option[java.sql.Timestamp]]("echoTestRunningAt")
@@ -69,13 +71,14 @@ object UserStateDAO {
       TableQuery[UserStateDbTableDef]
         .filter(_.meetingId === userState.meetingId)
         .filter(_.userId === userState.intId)
-        .map(u => (u.presenter, u.pinned, u.locked, u.speechLocale, u.captionLocale, u.away, u.raiseHand, u.mobile, u.clientType, u.disconnected))
+        .map(u => (u.presenter, u.pinned, u.locked, u.speechLocale, u.captionLocale, u.speakingLanguage, u.away, u.raiseHand, u.mobile, u.clientType, u.disconnected))
         .update((
           userState.presenter,
           userState.pin,
           userState.locked,
           userState.speechLocale,
           userState.captionLocale,
+          userState.speakingLanguage,
           userState.away,
           userState.raiseHand,
           userState.mobile,
