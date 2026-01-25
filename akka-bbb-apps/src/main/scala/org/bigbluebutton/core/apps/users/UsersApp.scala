@@ -210,6 +210,7 @@ class UsersApp(
   with ChangeUserRoleCmdMsgHdlr
   with SetUserSpeechLocaleMsgHdlr
   with SetUserCaptionLocaleMsgHdlr
+  with SetUserSpeakingLanguageMsgHdlr
   with SetUserClientSettingsReqMsgHdlr
   with SetUserEchoTestRunningReqMsgHdlr
   with SetUserSpeechOptionsMsgHdlr
