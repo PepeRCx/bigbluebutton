@@ -11,20 +11,10 @@
 
 import logger from '/imports/startup/client/logger';
 
-// TTS endpoint URL (relative to bbb-graphql-actions server)
+// TTS endpoint URL (proxied through nginx)
 const getTTSEndpoint = (): string => {
-  // Use the same server as GraphQL actions
-  const SETTINGS = window.meetingClientSettings;
-  const GRAPHQL_ACTIONS_URL = SETTINGS?.public?.app?.graphqlActionsUrl || '';
-
-  // Extract base URL and append /tts
-  if (GRAPHQL_ACTIONS_URL) {
-    const url = new URL(GRAPHQL_ACTIONS_URL);
-    return `${url.protocol}//${url.host}/tts`;
-  }
-
-  // Fallback to localhost for development
-  return 'http://localhost:8093/tts';
+  // Use relative URL - nginx will proxy to bbb-graphql-actions
+  return '/tts';
 };
 
 interface TTSResponse {
@@ -234,8 +224,7 @@ export const isTTSPlaying = (): boolean => isPlaying;
  */
 export const checkTTSAvailability = async (): Promise<boolean> => {
   try {
-    const endpoint = getTTSEndpoint().replace('/tts', '/tts/health');
-    const response = await fetch(endpoint);
+    const response = await fetch('/tts/health');
     const data = await response.json();
     return data.enabled === true;
   } catch {
