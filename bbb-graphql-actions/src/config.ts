@@ -32,6 +32,12 @@ const loadProperties = () => {
 
 const bbbProperties = loadProperties();
 
+if (Object.keys(bbbProperties).length > 0) {
+    console.info(`[Config] Loaded ${Object.keys(bbbProperties).length} properties from ${PROPERTIES_FILE}`);
+} else {
+    console.warn(`[Config] No properties loaded from ${PROPERTIES_FILE}. Ensure the file exists and is readable.`);
+}
+
 // Azure Translator Configuration
 export const AZURE_TRANSLATOR_ENABLED = process.env.AZURE_TRANSLATOR_ENABLED !== 'false'
     && (bbbProperties['azure.translator.enabled'] !== 'false');
@@ -43,3 +49,11 @@ export const AZURE_TRANSLATOR_ENDPOINT = process.env.AZURE_TRANSLATOR_ENDPOINT
 export const AZURE_TRANSLATOR_KEY = process.env.AZURE_TRANSLATOR_KEY
     || bbbProperties['azure.translator.key']
     || '';
+
+if (AZURE_TRANSLATOR_ENABLED) {
+    console.info('[Config] Azure Translator enabled.');
+    if (!AZURE_TRANSLATOR_ENDPOINT) console.warn('[Config] Azure Translator endpoint is missing.');
+    if (!AZURE_TRANSLATOR_KEY) console.warn('[Config] Azure Translator key is missing.');
+} else {
+    console.info('[Config] Azure Translator is disabled.');
+}

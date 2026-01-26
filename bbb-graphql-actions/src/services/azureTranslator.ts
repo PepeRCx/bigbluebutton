@@ -66,8 +66,8 @@ export function getSupportedLocales(): string[] {
  */
 export function isAzureTranslatorEnabled(): boolean {
   return AZURE_TRANSLATOR_ENABLED &&
-         !!AZURE_TRANSLATOR_ENDPOINT &&
-         !!AZURE_TRANSLATOR_KEY;
+    !!AZURE_TRANSLATOR_ENDPOINT &&
+    !!AZURE_TRANSLATOR_KEY;
 }
 
 /**
@@ -84,9 +84,16 @@ export async function translateText(
   targetLocales: string[]
 ): Promise<TranslationResult[]> {
   // If translation is disabled or no text, return empty
-  if (!isAzureTranslatorEnabled() || !text.trim()) {
+  if (!isAzureTranslatorEnabled()) {
+    console.debug('[AzureTranslator] Translation skipped: Service disabled or missing configuration.');
     return [];
   }
+
+  if (!text.trim()) {
+    return [];
+  }
+
+  console.info(`[AzureTranslator] Translating "${text.substring(0, 20)}..." from ${sourceLocale} to ${targetLocales.length} languages.`);
 
   // Convert source locale to Azure code
   const sourceAzureCode = toAzureCode(sourceLocale);
