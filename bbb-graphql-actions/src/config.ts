@@ -1,3 +1,5 @@
+import fs from 'fs';
+
 // If the environment variable is undefined, fallback to the default value
 export const REDIS_HOST = process.env.BBB_REDIS_HOST || '127.0.0.1';
 export const REDIS_PORT = Number(process.env.BBB_REDIS_PORT) || 6379;
@@ -6,7 +8,38 @@ export const SERVER_PORT = Number(process.env.SERVER_PORT) || 8093;
 export const MAX_BODY_SIZE = Number(process.env.MAX_BODY_SIZE) || 10485760; // 10MB
 export const DEBUG = false;
 
+// Load BigBlueButton properties
+const PROPERTIES_FILE = process.env.BBB_PROPERTIES_FILE || '/etc/bigbluebutton/bigbluebutton.properties';
+
+const loadProperties = () => {
+    const props: Record<string, string> = {};
+    if (fs.existsSync(PROPERTIES_FILE)) {
+        try {
+            const content = fs.readFileSync(PROPERTIES_FILE, 'utf-8');
+            content.split('\n').forEach((line) => {
+                const trimmed = line.trim();
+                if (trimmed && !trimmed.startsWith('#') && trimmed.includes('=')) {
+                    const [key, ...valueParts] = trimmed.split('=');
+                    props[key.trim()] = valueParts.join('=').trim();
+                }
+            });
+        } catch (err) {
+            console.error(`Error reading properties from ${PROPERTIES_FILE}:`, err);
+        }
+    }
+    return props;
+};
+
+const bbbProperties = loadProperties();
+
 // Azure Translator Configuration
-export const AZURE_TRANSLATOR_ENABLED = process.env.AZURE_TRANSLATOR_ENABLED !== 'false';
-export const AZURE_TRANSLATOR_ENDPOINT = process.env.AZURE_TRANSLATOR_ENDPOINT || '';
-export const AZURE_TRANSLATOR_KEY = process.env.AZURE_TRANSLATOR_KEY || '';
+export const AZURE_TRANSLATOR_ENABLED = process.env.AZURE_TRANSLATOR_ENABLED !== 'false'
+    && (bbbProperties['azure.translator.enabled'] !== 'false');
+
+export const AZURE_TRANSLATOR_ENDPOINT = process.env.AZURE_TRANSLATOR_ENDPOINT
+    || bbbProperties['azure.translator.endpoint']
+    || '';
+
+export const AZURE_TRANSLATOR_KEY = process.env.AZURE_TRANSLATOR_KEY
+    || bbbProperties['azure.translator.key']
+    || '';
