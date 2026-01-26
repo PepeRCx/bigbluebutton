@@ -57,3 +57,23 @@ if (AZURE_TRANSLATOR_ENABLED) {
 } else {
     console.info('[Config] Azure Translator is disabled.');
 }
+
+// Azure TTS (Text-to-Speech) Configuration
+export const AZURE_TTS_ENABLED = process.env.AZURE_TTS_ENABLED !== 'false'
+    && (bbbProperties['azure.tts.enabled'] !== 'false');
+
+export const AZURE_TTS_ENDPOINT = process.env.AZURE_TTS_ENDPOINT
+    || bbbProperties['azure.tts.endpoint']
+    || '';
+
+export const AZURE_TTS_KEY = process.env.AZURE_TTS_KEY
+    || bbbProperties['azure.tts.key']
+    || '';
+
+if (AZURE_TTS_ENABLED) {
+    console.info('[Config] Azure TTS enabled.');
+    if (!AZURE_TTS_ENDPOINT) console.warn('[Config] Azure TTS endpoint is missing.');
+    if (!AZURE_TTS_KEY) console.warn('[Config] Azure TTS key is missing.');
+} else {
+    console.info('[Config] Azure TTS is disabled.');
+}
