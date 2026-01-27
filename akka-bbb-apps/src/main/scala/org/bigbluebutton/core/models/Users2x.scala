@@ -271,6 +271,17 @@ object Users2x {
     }
   }
 
+  def setUserSpeakingLanguage(users: Users2x, intId: String, locale: String): Option[UserState] = {
+    for {
+      u <- findWithIntId(users, intId)
+    } yield {
+      val newUser = u.modify(_.speakingLanguage).setTo(locale)
+      UserStateDAO.update(newUser)
+      users.save(newUser)
+      newUser
+    }
+  }
+
   def hasPresenter(users: Users2x): Boolean = {
     findPresenter(users) match {
       case Some(p) => true
@@ -451,6 +462,7 @@ case class UserState(
     userLeftFlag:          UserLeftFlag,
     speechLocale:          String              = "",
     captionLocale:         String              = "",
+    speakingLanguage:      String              = "en-US",
     userMetadata:          Map[String, String] = Map.empty,
     userLockSettings:      UserLockSettings    = UserLockSettings()
 )

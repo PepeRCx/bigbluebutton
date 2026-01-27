@@ -26,9 +26,13 @@ export interface GetAudioCaptions {
   }>;
 }
 
+// Subscription that filters by locale AND excludes current user's own captions
 export const GET_CAPTIONS = gql`
-  subscription getCaptions($locale: String!) {
-    caption(where: {locale: {_eq: $locale}}) {
+  subscription getCaptions($locale: String!, $excludeUserId: String!) {
+    caption(where: {
+      locale: {_eq: $locale},
+      userId: {_neq: $excludeUserId}
+    }) {
       user {
         avatar
         color
