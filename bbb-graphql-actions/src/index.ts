@@ -1,17 +1,30 @@
 import express, { Request, Response } from 'express';
+import { createServer } from 'http';
 import util from 'util';
+import { WebSocketServer } from 'ws';
 import { redisMessageFactory } from './imports/redisMessageFactory';
 import { DEBUG, SERVER_HOST, SERVER_PORT, MAX_BODY_SIZE } from './config';
 import { createRedisClient } from './imports/redis';
 import { ValidationError } from './types/ValidationError';
 import { synthesizeSpeech, isAzureTTSEnabled } from './services/azureTTS';
+import { isAzureSTTEnabled } from './services/azureSpeechToText';
+import { initializeSTTWebSocket, getActiveConnectionCount } from './websocket/sttHandler';
 
 // Initialize Express Application
 const app = express();
 app.use(express.json({ limit: MAX_BODY_SIZE }));
 
+// Create HTTP server from Express app
+const server = createServer(app);
+
 // Create and configure Redis client
 const redisClient = createRedisClient();
+
+// Create WebSocket server for STT on path /stt/ws
+const wss = new WebSocketServer({
+  server,
+  path: '/stt/ws',
+});
 
 /**
  * Handles action submissions and publishes them to Redis.
@@ -141,18 +154,34 @@ app.get('/tts/health', (req: Request, res: Response) => {
   });
 });
 
+/**
+ * Health check endpoint for STT service
+ */
+app.get('/stt/health', (req: Request, res: Response) => {
+  res.status(200).json({
+    enabled: isAzureSTTEnabled(),
+    service: 'azure-stt',
+    activeConnections: getActiveConnectionCount(),
+  });
+});
+
 // Start the server and establish a connection to Redis.
 const startServer = () => {
   console.info("Starting server");
-  app.listen(SERVER_PORT, SERVER_HOST, () => {
+  server.listen(SERVER_PORT, SERVER_HOST, () => {
     console.log(`Server is running on ${SERVER_HOST}:${SERVER_PORT}`);
     console.info("Waiting for Redis connection");
     redisClient.connect();
   });
 }
 
-// Redis Client Event Listeners
-redisClient.on('connect', () => console.info("Connected with Redis"));
+// Initialize WebSocket handler for STT after Redis is connected
+redisClient.on('connect', () => {
+  console.info("Connected with Redis");
+  // Initialize STT WebSocket with Redis client
+  // @ts-ignore - RedisClient type compatibility
+  initializeSTTWebSocket(wss, redisClient);
+});
 redisClient.on('disconnect', () => console.info("Disconnected from Redis"));
 
 if(DEBUG) {
