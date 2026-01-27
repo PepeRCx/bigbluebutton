@@ -843,6 +843,8 @@
     "app.audio.captions.button.autoDetect": "Auto Detect",
     "app.audio.captions.button.iSpeak": "I speak",
     "app.audio.captions.button.showCaptionsIn": "Show captions in",
+    "app.audio.captions.button.voiceTranslation": "Voice Translation",
+    "app.audio.captions.button.voiceTranslationDesc": "Listen to translated captions as speech",
     "app.audio.captions.speech.title": "Automatic transcription",
     "app.audio.captions.speech.disabled": "Disabled",
     "app.audio.captions.speech.unsupported": "Your browser doesn't support speech recognition. Your audio won't be transcribed",

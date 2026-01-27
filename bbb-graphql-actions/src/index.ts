@@ -4,6 +4,7 @@ import { redisMessageFactory } from './imports/redisMessageFactory';
 import { DEBUG, SERVER_HOST, SERVER_PORT, MAX_BODY_SIZE } from './config';
 import { createRedisClient } from './imports/redis';
 import { ValidationError } from './types/ValidationError';
+import { synthesizeSpeech, isAzureTTSEnabled } from './services/azureTTS';
 
 // Initialize Express Application
 const app = express();
@@ -78,6 +79,66 @@ app.post('/', async (req: Request, res: Response) => {
       res.status(400).send({message: `${actionName}: Internal Server Error`});
     }
   }
+});
+
+/**
+ * TTS (Text-to-Speech) endpoint for voice translation
+ * Receives text and locale, returns audio as base64
+ */
+app.post('/tts', async (req: Request, res: Response) => {
+  try {
+    const { text, locale } = req.body;
+
+    // Validate required fields
+    if (!text || typeof text !== 'string') {
+      res.status(400).json({ success: false, error: 'Missing or invalid text parameter' });
+      return;
+    }
+
+    if (!locale || typeof locale !== 'string') {
+      res.status(400).json({ success: false, error: 'Missing or invalid locale parameter' });
+      return;
+    }
+
+    // Check if TTS is enabled
+    if (!isAzureTTSEnabled()) {
+      res.status(503).json({ success: false, error: 'TTS service is not available' });
+      return;
+    }
+
+    if (DEBUG) {
+      console.debug('[TTS] Request:', { text: text.substring(0, 50), locale });
+    }
+
+    // Synthesize speech
+    const result = await synthesizeSpeech(text, locale);
+
+    if (result.success && result.audio) {
+      res.status(200).json({
+        success: true,
+        audio: result.audio,
+        contentType: 'audio/mpeg',
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        error: result.error || 'TTS synthesis failed',
+      });
+    }
+  } catch (error) {
+    console.error('[TTS] Error:', error);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+/**
+ * Health check endpoint for TTS service
+ */
+app.get('/tts/health', (req: Request, res: Response) => {
+  res.status(200).json({
+    enabled: isAzureTTSEnabled(),
+    service: 'azure-tts',
+  });
 });
 
 // Start the server and establish a connection to Redis.
