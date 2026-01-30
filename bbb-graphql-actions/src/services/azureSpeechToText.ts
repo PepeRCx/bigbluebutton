@@ -89,10 +89,10 @@ export function createSTTSession(
   speechConfig.speechRecognitionLanguage = azureLang;
 
   // Enable intermediate results
-  speechConfig.setProperty(
-    sdk.PropertyId.SpeechServiceResponse_RequestSentimentAnalysis,
-    'false'
-  );
+  // speechConfig.setProperty(
+  //   sdk.PropertyId.SpeechServiceResponse_RequestSentimentAnalysis,
+  //   'false'
+  // );
 
   // Create push audio stream (16kHz, 16-bit mono PCM)
   const pushStream = sdk.AudioInputStream.createPushStream(
@@ -106,7 +106,7 @@ export function createSTTSession(
   const recognizer = new sdk.SpeechRecognizer(speechConfig, audioConfig);
 
   // Set up event handlers
-  recognizer.recognizing = (_s: sdk.SpeechRecognizer, e: sdk.SpeechRecognitionEventArgs) => {
+  recognizer.recognizing = (_s: sdk.Recognizer, e: sdk.SpeechRecognitionEventArgs) => {
     if (e.result.reason === sdk.ResultReason.RecognizingSpeech) {
       const text = e.result.text;
       if (text) {
@@ -115,7 +115,7 @@ export function createSTTSession(
     }
   };
 
-  recognizer.recognized = (_s: sdk.SpeechRecognizer, e: sdk.SpeechRecognitionEventArgs) => {
+  recognizer.recognized = (_s: sdk.Recognizer, e: sdk.SpeechRecognitionEventArgs) => {
     if (e.result.reason === sdk.ResultReason.RecognizedSpeech) {
       const text = e.result.text;
       if (text) {
@@ -126,7 +126,7 @@ export function createSTTSession(
     }
   };
 
-  recognizer.canceled = (_s: sdk.SpeechRecognizer, e: sdk.SpeechRecognitionCanceledEventArgs) => {
+  recognizer.canceled = (_s: sdk.Recognizer, e: sdk.SpeechRecognitionCanceledEventArgs) => {
     if (e.reason === sdk.CancellationReason.Error) {
       console.error(`[AzureSTT] Recognition canceled: ${e.errorDetails}`);
       callbacks.onError(`Recognition error: ${e.errorDetails}`);
