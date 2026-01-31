@@ -96,8 +96,8 @@ public:
       alwaysVisible: false
       # mobile: <Boolean> - controls speech transcription availability on mobile
       mobile: false
-      # provider: [webspeech, vosk, gladia]
-      provider: webspeech
+      # provider: [webspeech, vosk, gladia, azure]
+      provider: azure
       language:
         # Available languages will depend on the transcription service
         # Google: https://cloud.google.com/speech-to-text/docs/speech-to-text-supported-languages

@@ -22,10 +22,12 @@ import AudioManager from '/imports/ui/services/audio-manager';
 import useCurrentUser from '/imports/ui/core/hooks/useCurrentUser';
 import {
   isWebSpeechApi,
+  isAzure,
   setUserLocaleProperty,
   setSpeechLocale,
   useIsAudioTranscriptionEnabled,
 } from '../service';
+import AzureSTTProviderContainer from './azure-stt/component';
 import { SET_SPEECH_LOCALE } from '/imports/ui/core/graphql/mutations/userMutations';
 import { SUBMIT_TEXT } from './mutations';
 import useIsAudioConnected from '/imports/ui/components/audio/audio-graphql/hooks/useIsAudioConnected';
@@ -99,6 +101,8 @@ const AudioCaptionsSpeech: React.FC<AudioCaptionsSpeechProps> = ({
     if (!isAudioTranscriptionEnabled) return null;
 
     if (!isWebSpeechApi()) {
+      // Azure and other server-side providers (Gladia, Vosk) handle
+      // transcription via their own components
       setDefaultLocale();
       return null;
     }
@@ -359,6 +363,11 @@ const AudioCaptionsSpeechContainer: React.FC = () => {
   );
 
   if (!currentUser) return null;
+
+  // Azure provider uses its own component for audio capture and streaming
+  if (isAzure()) {
+    return <AzureSTTProviderContainer />;
+  }
 
   return (
     <AudioCaptionsSpeech

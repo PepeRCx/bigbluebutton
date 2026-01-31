@@ -64,6 +64,7 @@ const getSpeechProvider = () => {
 
 export const isWebSpeechApi = () => getSpeechProvider() === 'webspeech';
 export const isGladia = () => getSpeechProvider() === 'gladia';
+export const isAzure = () => getSpeechProvider() === 'azure';
 
 export const getSpeechVoices = () => {
   const LANGUAGES = window.meetingClientSettings.public.app.audioCaptions.language.available;
@@ -120,6 +121,7 @@ export default {
   isWebSpeechApi,
   useFixedLocale,
   isGladia,
+  isAzure,
   splitTranscript,
   getLocaleName,
 };

@@ -77,3 +77,23 @@ if (AZURE_TTS_ENABLED) {
 } else {
     console.info('[Config] Azure TTS is disabled.');
 }
+
+// Azure STT (Speech-to-Text) Configuration
+export const AZURE_STT_ENABLED = process.env.AZURE_STT_ENABLED !== 'false'
+    && (bbbProperties['azure.stt.enabled'] !== 'false');
+
+export const AZURE_STT_KEY = process.env.AZURE_STT_KEY
+    || bbbProperties['azure.stt.key']
+    || '';
+
+export const AZURE_STT_REGION = process.env.AZURE_STT_REGION
+    || bbbProperties['azure.stt.region']
+    || 'eastus';
+
+if (AZURE_STT_ENABLED) {
+    console.info('[Config] Azure STT enabled.');
+    if (!AZURE_STT_KEY) console.warn('[Config] Azure STT key is missing.');
+    if (!AZURE_STT_REGION) console.warn('[Config] Azure STT region is missing.');
+} else {
+    console.info('[Config] Azure STT is disabled.');
+}
