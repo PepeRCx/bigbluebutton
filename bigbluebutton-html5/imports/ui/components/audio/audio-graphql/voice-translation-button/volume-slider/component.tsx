@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React from 'react';
 import Icon from '/imports/ui/components/common/icon/component';
 import Styled from './styles';
 
@@ -22,51 +22,16 @@ const VolumeSlider: React.FC<VolumeSliderProps> = ({
   label,
   disabled = false,
 }) => {
-  // Use local state to track value during drag
-  const [localValue, setLocalValue] = useState(value);
-  const isDragging = useRef(false);
-  const pendingValue = useRef(value);
-
-  // Sync local value with prop when not dragging
-  useEffect(() => {
-    if (!isDragging.current) {
-      setLocalValue(value);
-      pendingValue.current = value;
-    }
-  }, [value]);
-
-  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = parseFloat(e.target.value);
-    setLocalValue(newValue);
-    pendingValue.current = newValue;
-    // Don't call onChange here - wait for drag end to avoid re-renders
-  }, []);
+    onChange(newValue);
+  };
 
-  const handleDragStart = useCallback((e: React.MouseEvent | React.TouchEvent | React.PointerEvent) => {
+  const stopPropagation = (e: React.SyntheticEvent) => {
     e.stopPropagation();
-    e.preventDefault();
-    isDragging.current = true;
-  }, []);
+  };
 
-  const handleDragEnd = useCallback(() => {
-    if (isDragging.current) {
-      isDragging.current = false;
-      // Commit the value when drag ends
-      onChange(pendingValue.current);
-    }
-  }, [onChange]);
-
-  const handleClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    // For click (not drag), commit immediately
-    onChange(pendingValue.current);
-  }, [onChange]);
-
-  const stopPropagation = useCallback((e: React.MouseEvent | React.TouchEvent | React.PointerEvent) => {
-    e.stopPropagation();
-  }, []);
-
-  const percentage = Math.round(localValue * 100);
+  const percentage = Math.round(value * 100);
 
   return (
     <Styled.SliderContainer
@@ -76,7 +41,7 @@ const VolumeSlider: React.FC<VolumeSliderProps> = ({
       onClick={stopPropagation}
     >
       <Styled.VolumeIcon>
-        <Icon iconName={getVolumeIcon(localValue)} />
+        <Icon iconName={getVolumeIcon(value)} />
       </Styled.VolumeIcon>
       <Styled.SliderWrapper>
         <Styled.Slider
@@ -84,15 +49,10 @@ const VolumeSlider: React.FC<VolumeSliderProps> = ({
           min="0"
           max="1"
           step="0.02"
-          value={localValue}
+          value={value}
           onChange={handleChange}
-          onMouseDown={handleDragStart}
-          onMouseUp={handleDragEnd}
-          onMouseLeave={handleDragEnd}
-          onTouchStart={handleDragStart}
-          onTouchEnd={handleDragEnd}
-          onBlur={handleDragEnd}
-          onClick={handleClick}
+          onMouseDown={stopPropagation}
+          onTouchStart={stopPropagation}
           disabled={disabled}
           aria-label={label}
         />

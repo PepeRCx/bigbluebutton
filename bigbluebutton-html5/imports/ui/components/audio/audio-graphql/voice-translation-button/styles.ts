@@ -49,10 +49,24 @@ const SliderLabel = {
   paddingTop: '0.5rem',
 };
 
+const VolumeControlsSection = styled.div`
+  padding: 0.5rem 1rem 1rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.12);
+`;
+
+const VolumeLabel = styled.div`
+  font-size: 0.875rem;
+  font-weight: 500;
+  opacity: 0.9;
+  padding: 0.5rem 0 0.25rem;
+`;
+
 export default {
   VoiceTranslationToggleButton,
   SpanButtonWrapper,
   TitleLabel,
   SelectedLabel,
   SliderLabel,
+  VolumeControlsSection,
+  VolumeLabel,
 };

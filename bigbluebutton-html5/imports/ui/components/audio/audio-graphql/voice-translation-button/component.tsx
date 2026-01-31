@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import * as ReactDOM from 'react-dom/client';
 import { defineMessages, useIntl } from 'react-intl';
 import { useMutation } from '@apollo/client';
 import { layoutSelect } from '/imports/ui/components/layout/context';
@@ -150,56 +149,32 @@ const VoiceTranslationButton: React.FC<VoiceTranslationButtonProps> = ({
       });
     });
 
-    if (voiceTranslationEnabled) {
-      actions.push(
-        {
-          key: 'separator-volumes',
-          isSeparator: true,
-        },
-        {
-          key: 'originalVolumeHeader',
-          label: intl.formatMessage(intlMessages.originalSpeakerVolume),
-          customStyles: Styled.SliderLabel,
-          disabled: true,
-        },
-        {
-          key: 'original-volume-slider',
-          contentFunction: (element: HTMLElement) => {
-            const root = ReactDOM.createRoot(element);
-            root.render(
-              <VolumeSlider
-                value={originalVolume}
-                onChange={(v: number) => setOriginalSpeakerVolume(v)}
-                label={intl.formatMessage(intlMessages.originalSpeakerVolume)}
-              />,
-            );
-            return root;
-          },
-        },
-        {
-          key: 'ttsVolumeHeader',
-          label: intl.formatMessage(intlMessages.ttsVoiceVolume),
-          customStyles: Styled.SliderLabel,
-          disabled: true,
-        },
-        {
-          key: 'tts-volume-slider',
-          contentFunction: (element: HTMLElement) => {
-            const root = ReactDOM.createRoot(element);
-            root.render(
-              <VolumeSlider
-                value={ttsVolume}
-                onChange={(v: number) => setTTSVolume(v)}
-                label={intl.formatMessage(intlMessages.ttsVoiceVolume)}
-              />,
-            );
-            return root;
-          },
-        },
-      );
-    }
-
     return actions;
+  };
+
+  const renderVolumeControls = () => {
+    if (!voiceTranslationEnabled) return null;
+
+    return (
+      <Styled.VolumeControlsSection>
+        <Styled.VolumeLabel>
+          {intl.formatMessage(intlMessages.originalSpeakerVolume)}
+        </Styled.VolumeLabel>
+        <VolumeSlider
+          value={originalVolume}
+          onChange={(v: number) => setOriginalSpeakerVolume(v)}
+          label={intl.formatMessage(intlMessages.originalSpeakerVolume)}
+        />
+        <Styled.VolumeLabel>
+          {intl.formatMessage(intlMessages.ttsVoiceVolume)}
+        </Styled.VolumeLabel>
+        <VolumeSlider
+          value={ttsVolume}
+          onChange={(v: number) => setTTSVolume(v)}
+          label={intl.formatMessage(intlMessages.ttsVoiceVolume)}
+        />
+      </Styled.VolumeControlsSection>
+    );
   };
 
   const buttonIcon = voiceTranslationEnabled ? 'speak_louder' : 'listen';
@@ -238,6 +213,7 @@ const VoiceTranslationButton: React.FC<VoiceTranslationButtonProps> = ({
           </>
         )}
         actions={getMenuActions()}
+        renderOtherComponents={renderVolumeControls()}
         opts={{
           id: 'voice-translation-dropdown-menu',
           keepMounted: true,
