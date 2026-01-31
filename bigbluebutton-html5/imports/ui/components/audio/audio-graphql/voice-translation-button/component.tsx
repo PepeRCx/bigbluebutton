@@ -110,7 +110,7 @@ const VoiceTranslationButton: React.FC<VoiceTranslationButtonProps> = ({
   const getMenuActions = (): MenuAction[] => {
     const actions: MenuAction[] = [
       {
-        icon: voiceTranslationEnabled ? 'record_voice_over' : 'voice_over_off',
+        icon: voiceTranslationEnabled ? 'speak_louder' : 'listen',
         label: voiceTranslationEnabled
           ? intl.formatMessage(intlMessages.disableVoiceTranslation)
           : intl.formatMessage(intlMessages.enableVoiceTranslation),
@@ -202,7 +202,7 @@ const VoiceTranslationButton: React.FC<VoiceTranslationButtonProps> = ({
     return actions;
   };
 
-  const buttonIcon = voiceTranslationEnabled ? 'record_voice_over' : 'voice_over_off';
+  const buttonIcon = voiceTranslationEnabled ? 'speak_louder' : 'listen';
 
   const voiceTranslationButton = (
     <Styled.VoiceTranslationToggleButton
