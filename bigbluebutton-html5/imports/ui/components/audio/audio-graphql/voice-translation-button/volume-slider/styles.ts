@@ -12,6 +12,8 @@ const SliderContainer = styled.div`
   padding: 0.5rem 0;
   width: 100%;
   min-width: 200px;
+  user-select: none;
+  -webkit-user-select: none;
 `;
 
 const VolumeIcon = styled.span`
@@ -37,6 +39,8 @@ const Slider = styled.input`
   background: ${colorGrayLight};
   outline: none;
   cursor: pointer;
+  pointer-events: auto;
+  touch-action: none;
 
   &::-webkit-slider-thumb {
     -webkit-appearance: none;
@@ -45,8 +49,14 @@ const Slider = styled.input`
     height: 16px;
     border-radius: 50%;
     background: ${colorPrimary};
-    cursor: pointer;
+    cursor: grab;
     transition: transform 0.1s ease-in-out;
+    pointer-events: auto;
+
+    &:active {
+      cursor: grabbing;
+      transform: scale(1.1);
+    }
 
     &:hover {
       transform: scale(1.1);
@@ -58,9 +68,15 @@ const Slider = styled.input`
     height: 16px;
     border-radius: 50%;
     background: ${colorPrimary};
-    cursor: pointer;
+    cursor: grab;
     border: none;
     transition: transform 0.1s ease-in-out;
+    pointer-events: auto;
+
+    &:active {
+      cursor: grabbing;
+      transform: scale(1.1);
+    }
 
     &:hover {
       transform: scale(1.1);

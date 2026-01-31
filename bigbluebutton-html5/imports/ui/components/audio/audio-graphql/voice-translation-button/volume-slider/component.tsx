@@ -27,10 +27,26 @@ const VolumeSlider: React.FC<VolumeSliderProps> = ({
     onChange(newValue);
   };
 
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.stopPropagation();
+  };
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    e.stopPropagation();
+  };
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+  };
+
   const percentage = Math.round(value * 100);
 
   return (
-    <Styled.SliderContainer>
+    <Styled.SliderContainer
+      onMouseDown={handleMouseDown}
+      onPointerDown={handlePointerDown}
+      onClick={handleClick}
+    >
       <Styled.VolumeIcon>
         <Icon iconName={getVolumeIcon(value)} />
       </Styled.VolumeIcon>
@@ -42,6 +58,8 @@ const VolumeSlider: React.FC<VolumeSliderProps> = ({
           step="0.02"
           value={value}
           onChange={handleChange}
+          onMouseDown={handleMouseDown}
+          onPointerDown={handlePointerDown}
           disabled={disabled}
           aria-label={label}
         />
