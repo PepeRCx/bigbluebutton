@@ -3,9 +3,11 @@ export type MenuOptionItemType = {
   dataTest?: string;
   label?: string;
   customStyles?: object;
-  iconRight?: string;
+  iconRight?: string | null;
+  icon?: string;
   onClick?: () => void;
   disabled?: boolean;
+  contentFunction?: (element: HTMLElement) => { unmount: () => void };
 };
 
 export type MenuSeparatorItemType = {

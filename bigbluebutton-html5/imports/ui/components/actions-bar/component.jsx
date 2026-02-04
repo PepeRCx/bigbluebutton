@@ -4,6 +4,7 @@ import { ActionsBarItemType, ActionsBarPosition } from 'bigbluebutton-html-plugi
 import Styled from './styles';
 import ActionsDropdown from './actions-dropdown/container';
 import AudioCaptionsButtonContainer from '/imports/ui/components/audio/audio-graphql/audio-captions/button/component';
+import VoiceTranslationButtonContainer from '/imports/ui/components/audio/audio-graphql/voice-translation-button/component';
 import ScreenshareButtonContainer from '/imports/ui/components/actions-bar/screenshare/container';
 import AudioControlsContainer from '../audio/audio-graphql/audio-controls/component';
 import JoinVideoOptionsContainer from '../video-provider/video-button/container';
@@ -217,6 +218,7 @@ class ActionsBar extends PureComponent {
           <Styled.Center>
             {this.renderPluginsActionBarItems(ActionsBarPosition.LEFT)}
             <AudioCaptionsButtonContainer />
+            <VoiceTranslationButtonContainer />
             <AudioControlsContainer />
             {shouldShowVideoButton && enableVideo
               ? (

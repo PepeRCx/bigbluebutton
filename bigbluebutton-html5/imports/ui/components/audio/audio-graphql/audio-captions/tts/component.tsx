@@ -12,14 +12,24 @@ import React, { useEffect, useRef } from 'react';
 import { useSubscription } from '@apollo/client';
 import useVoiceTranslationEnable from '/imports/ui/core/local-states/useVoiceTranslationEnable';
 import useAudioCaptionEnable from '/imports/ui/core/local-states/useAudioCaptionEnable';
+import useTTSVolume from '/imports/ui/core/local-states/useTTSVolume';
+import useOriginalSpeakerVolume from '/imports/ui/core/local-states/useOriginalSpeakerVolume';
 import useCurrentUser from '/imports/ui/core/hooks/useCurrentUser';
-import { GET_CAPTIONS, getCaptions, Caption } from '../live/queries';
-import { speakText, stopTTSAudio, setOriginalSpeakerMuted } from './service';
+import { GET_CAPTIONS, getCaptions } from '../live/queries';
+import {
+  speakText,
+  stopTTSAudio,
+  setOriginalSpeakerVolumeValue,
+  setTTSVolumeValue,
+  restoreOriginalSpeakerVolume,
+} from './service';
 import logger from '/imports/startup/client/logger';
 
 const TTSController: React.FC = () => {
   const [voiceTranslationEnabled] = useVoiceTranslationEnable();
   const [audioCaptionsEnabled] = useAudioCaptionEnable();
+  const [ttsVolume] = useTTSVolume();
+  const [originalSpeakerVolume] = useOriginalSpeakerVolume();
 
   const {
     data: currentUser,
@@ -87,13 +97,14 @@ const TTSController: React.FC = () => {
   // Handle TTS enable/disable state changes
   useEffect(() => {
     if (voiceTranslationEnabled && audioCaptionsEnabled) {
-      // TTS enabled - mute original speaker
-      setOriginalSpeakerMuted(true);
+      // TTS enabled - apply volume settings
+      setOriginalSpeakerVolumeValue(originalSpeakerVolume);
+      setTTSVolumeValue(ttsVolume);
       logger.info({ logCode: 'tts_enabled' }, 'Voice Translation enabled');
     } else {
-      // TTS disabled - stop any playing audio and unmute original speaker
+      // TTS disabled - stop any playing audio and restore original speaker volume
       stopTTSAudio();
-      setOriginalSpeakerMuted(false);
+      restoreOriginalSpeakerVolume();
       lastSpokenCaptionId.current = '';
       logger.info({ logCode: 'tts_disabled' }, 'Voice Translation disabled');
     }
@@ -101,9 +112,22 @@ const TTSController: React.FC = () => {
     // Cleanup on unmount
     return () => {
       stopTTSAudio();
-      setOriginalSpeakerMuted(false);
+      restoreOriginalSpeakerVolume();
     };
   }, [voiceTranslationEnabled, audioCaptionsEnabled]);
+
+  // Apply volume changes when sliders are adjusted
+  useEffect(() => {
+    if (voiceTranslationEnabled && audioCaptionsEnabled) {
+      setTTSVolumeValue(ttsVolume);
+    }
+  }, [ttsVolume, voiceTranslationEnabled, audioCaptionsEnabled]);
+
+  useEffect(() => {
+    if (voiceTranslationEnabled && audioCaptionsEnabled) {
+      setOriginalSpeakerVolumeValue(originalSpeakerVolume);
+    }
+  }, [originalSpeakerVolume, voiceTranslationEnabled, audioCaptionsEnabled]);
 
   // This component doesn't render anything visible
   return null;

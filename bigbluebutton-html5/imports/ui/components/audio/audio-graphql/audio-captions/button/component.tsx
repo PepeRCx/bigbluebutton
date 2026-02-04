@@ -12,7 +12,6 @@ import {
 } from '../service';
 import { MenuSeparatorItemType, MenuOptionItemType } from '/imports/ui/components/common/menu/menuTypes';
 import useAudioCaptionEnable from '/imports/ui/core/local-states/useAudioCaptionEnable';
-import useVoiceTranslationEnable, { setVoiceTranslationEnable } from '/imports/ui/core/local-states/useVoiceTranslationEnable';
 import { User } from '/imports/ui/Types/user';
 import { SET_CAPTION_LOCALE, SET_SPEAKING_LANGUAGE } from '/imports/ui/core/graphql/mutations/userMutations';
 import useMeeting from '/imports/ui/core/hooks/useMeeting';
@@ -69,14 +68,6 @@ const messages: { [key: string]: { id: string; description?: string } } = {
     id: 'app.audio.captions.button.showCaptionsIn',
     description: 'Show captions in language selector label',
   },
-  voiceTranslation: {
-    id: 'app.audio.captions.button.voiceTranslation',
-    description: 'Voice translation toggle label',
-  },
-  voiceTranslationDesc: {
-    id: 'app.audio.captions.button.voiceTranslationDesc',
-    description: 'Voice translation feature description',
-  },
 };
 
 Object.keys(TRANSCRIPTION_LOCALE).forEach((key: string) => {
@@ -111,7 +102,6 @@ const AudioCaptionsButton: React.FC<AudioCaptionsButtonProps> = ({
 
   const intl = useIntl();
   const [active] = useAudioCaptionEnable();
-  const [voiceTranslationEnabled] = useVoiceTranslationEnable();
   const [setCaptionLocaleMutation] = useMutation(SET_CAPTION_LOCALE);
   const [setSpeakingLanguageMutation] = useMutation(SET_SPEAKING_LANGUAGE);
 
@@ -305,34 +295,6 @@ const AudioCaptionsButton: React.FC<AudioCaptionsButtonProps> = ({
         menuItems.push(autoLanguage);
       }
       menuItems.push(...getAvailableLocales());
-    }
-
-    // Add Voice Translation toggle (only visible when captions are active)
-    if (active) {
-      menuItems.push(
-        {
-          key: 'voiceTranslationHeader',
-          label: intl.formatMessage(intlMessages.voiceTranslation),
-          customStyles: Styled.TitleLabel,
-          disabled: true,
-        },
-        {
-          key: 'separator-voice-translation',
-          isSeparator: true,
-        },
-        {
-          icon: voiceTranslationEnabled ? 'unmute' : 'mute',
-          label: voiceTranslationEnabled
-            ? intl.formatMessage(intlMessages.transcriptionOn)
-            : intl.formatMessage(intlMessages.transcriptionOff),
-          key: 'voice-translation-toggle',
-          iconRight: voiceTranslationEnabled ? 'check' : null,
-          customStyles: voiceTranslationEnabled && Styled.SelectedLabel,
-          onClick: () => {
-            setVoiceTranslationEnable(!voiceTranslationEnabled);
-          },
-        },
-      );
     }
 
     return menuItems.filter((e) => e);
