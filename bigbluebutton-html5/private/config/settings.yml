@@ -107,12 +107,12 @@ public:
           - en-US
           - es-ES
           - fr-FR
-        # - hi-IN
-        # - it-IT
-        # - ja-JP
           - pt-BR
-        # - ru-RU
-        # - zh-CN
+          - ru-RU
+          - it-IT
+          - pl-PL
+          - nl-NL
+          - uk-UA
         # If true, automatically uses the below locale field content as transcription language
         # and the language selector in audio modal won't show up!
         forceLocale: false
