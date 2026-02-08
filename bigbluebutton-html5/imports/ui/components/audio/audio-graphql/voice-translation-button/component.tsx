@@ -20,13 +20,8 @@ import { MenuOptionItemType, MenuSeparatorItemType } from '/imports/ui/component
 
 type MenuAction = MenuOptionItemType | MenuSeparatorItemType;
 
-const TRANSLATION_LANGUAGES = [
-  { locale: 'en-US', name: 'English' },
-  { locale: 'es-ES', name: 'Español' },
-  { locale: 'pt-BR', name: 'Português' },
-  { locale: 'de-DE', name: 'Deutsch' },
-  { locale: 'fr-FR', name: 'Français' },
-];
+const getTranslationLanguages = () => window.meetingClientSettings?.public?.app?.audioCaptions
+  ?.translation?.supportedLanguages || [];
 
 const intlMessages = defineMessages({
   voiceTranslation: {
@@ -136,7 +131,7 @@ const VoiceTranslationButton: React.FC<VoiceTranslationButtonProps> = ({
       },
     ];
 
-    TRANSLATION_LANGUAGES.forEach((lang) => {
+    getTranslationLanguages().forEach((lang) => {
       actions.push({
         icon: '',
         label: lang.name,

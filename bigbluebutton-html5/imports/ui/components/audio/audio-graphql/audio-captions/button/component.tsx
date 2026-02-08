@@ -20,14 +20,8 @@ import AudioCaptionsService from '/imports/ui/components/audio/audio-graphql/aud
 import useDeduplicatedSubscription from '/imports/ui/core/hooks/useDeduplicatedSubscription';
 import { TRANSCRIPTION_LOCALE } from '/imports/ui/components/audio/audio-graphql/audio-captions/transcriptionLocale';
 
-// Supported languages for translation
-const TRANSLATION_LANGUAGES = [
-  { locale: 'en-US', name: 'English' },
-  { locale: 'es-ES', name: 'Español' },
-  { locale: 'pt-BR', name: 'Português' },
-  { locale: 'de-DE', name: 'Deutsch' },
-  { locale: 'fr-FR', name: 'Français' },
-];
+const getTranslationLanguages = () => window.meetingClientSettings?.public?.app?.audioCaptions
+  ?.translation?.supportedLanguages || [];
 
 const messages: { [key: string]: { id: string; description?: string } } = {
   start: {
@@ -149,7 +143,7 @@ const AudioCaptionsButton: React.FC<AudioCaptionsButtonProps> = ({
 
   // Build "I speak" language options
   const getSpeakingLanguageOptions = (): (MenuOptionItemType | MenuSeparatorItemType)[] => {
-    return TRANSLATION_LANGUAGES.map((lang) => ({
+    return getTranslationLanguages().map((lang) => ({
       icon: '',
       label: lang.name,
       key: `speak-${lang.locale}`,
@@ -164,7 +158,7 @@ const AudioCaptionsButton: React.FC<AudioCaptionsButtonProps> = ({
 
   // Build "Show captions in" language options
   const getCaptionLanguageOptions = (): (MenuOptionItemType | MenuSeparatorItemType)[] => {
-    return TRANSLATION_LANGUAGES.map((lang) => ({
+    return getTranslationLanguages().map((lang) => ({
       icon: '',
       label: lang.name,
       key: `caption-${lang.locale}`,
