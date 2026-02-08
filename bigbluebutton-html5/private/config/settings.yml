@@ -145,6 +145,21 @@ public:
           - locale: fr-FR
             name: French
             azureCode: fr
+          - locale: ru-RU
+            name: Russian
+            azureCode: ru
+          - locale: it-IT
+            name: Italian
+            azureCode: it
+          - locale: pl-PL
+            name: Polish
+            azureCode: pl
+          - locale: nl-NL
+            name: Dutch
+            azureCode: nl
+          - locale: uk-UA
+            name: Ukrainian
+            azureCode: uk
     mutedAlert:
       enabled: true
       interval: 200
