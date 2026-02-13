@@ -93,6 +93,14 @@ export const SET_CAPTION_LOCALE = gql`
   }
 `;
 
+export const SET_SPEAKING_LANGUAGE = gql`
+  mutation SetSpeakingLanguage($locale: String!) {
+    userSetSpeakingLanguage(
+      locale: $locale,
+    )
+  }
+`;
+
 export const USER_LEAVE_MEETING = gql`
   mutation UserLeaveMeeting {
     userLeaveMeeting
@@ -125,6 +133,8 @@ export default {
   CLEAR_ALL_REACTION,
   SET_EXIT_REASON,
   SET_SPEECH_LOCALE,
+  SET_CAPTION_LOCALE,
+  SET_SPEAKING_LANGUAGE,
   USER_LEAVE_MEETING,
   SET_USER_CHAT_LOCKED,
 };

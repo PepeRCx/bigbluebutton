@@ -7,6 +7,7 @@ import {
   setUserLocaleProperty,
   useFixedLocale,
   isGladia,
+  isAzure,
   useIsAudioTranscriptionEnabled,
   getLocaleName,
 } from '../service';
@@ -77,7 +78,7 @@ const AudioCaptionsSelect: React.FC<AudioCaptionsSelectProps> = ({
 
   if (!isTranscriptionEnabled || useLocaleHook) return null;
 
-  if (speechVoices.length === 0 && !isGladia()) {
+  if (speechVoices.length === 0 && !isGladia() && !isAzure()) {
     return (
       <div
         data-test="speechRecognitionUnsupported"

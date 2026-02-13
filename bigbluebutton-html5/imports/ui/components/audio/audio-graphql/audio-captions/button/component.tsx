@@ -13,12 +13,15 @@ import {
 import { MenuSeparatorItemType, MenuOptionItemType } from '/imports/ui/components/common/menu/menuTypes';
 import useAudioCaptionEnable from '/imports/ui/core/local-states/useAudioCaptionEnable';
 import { User } from '/imports/ui/Types/user';
-import { SET_CAPTION_LOCALE } from '/imports/ui/core/graphql/mutations/userMutations';
+import { SET_CAPTION_LOCALE, SET_SPEAKING_LANGUAGE } from '/imports/ui/core/graphql/mutations/userMutations';
 import useMeeting from '/imports/ui/core/hooks/useMeeting';
 import { ActiveCaptionsResponse, getactiveCaptions } from './queries';
 import AudioCaptionsService from '/imports/ui/components/audio/audio-graphql/audio-captions/service';
 import useDeduplicatedSubscription from '/imports/ui/core/hooks/useDeduplicatedSubscription';
 import { TRANSCRIPTION_LOCALE } from '/imports/ui/components/audio/audio-graphql/audio-captions/transcriptionLocale';
+
+const getTranslationLanguages = () => window.meetingClientSettings?.public?.app?.audioCaptions
+  ?.translation?.supportedLanguages || [];
 
 const messages: { [key: string]: { id: string; description?: string } } = {
   start: {
@@ -51,6 +54,14 @@ const messages: { [key: string]: { id: string; description?: string } } = {
     id: 'app.audio.captions.button.autoDetect',
     description: 'Audio speech recognition language auto detect',
   },
+  iSpeak: {
+    id: 'app.audio.captions.button.iSpeak',
+    description: 'I speak language selector label',
+  },
+  showCaptionsIn: {
+    id: 'app.audio.captions.button.showCaptionsIn',
+    description: 'Show captions in language selector label',
+  },
 };
 
 Object.keys(TRANSCRIPTION_LOCALE).forEach((key: string) => {
@@ -67,6 +78,7 @@ interface AudioCaptionsButtonProps {
   isRTL: boolean;
   availableVoices: string[];
   currentCaptionLocale: string;
+  currentSpeakingLanguage: string;
   isSupported: boolean;
 }
 
@@ -75,6 +87,7 @@ const DISABLED = '';
 const AudioCaptionsButton: React.FC<AudioCaptionsButtonProps> = ({
   isRTL,
   currentCaptionLocale,
+  currentSpeakingLanguage,
   availableVoices,
   isSupported,
 }) => {
@@ -84,6 +97,8 @@ const AudioCaptionsButton: React.FC<AudioCaptionsButtonProps> = ({
   const intl = useIntl();
   const [active] = useAudioCaptionEnable();
   const [setCaptionLocaleMutation] = useMutation(SET_CAPTION_LOCALE);
+  const [setSpeakingLanguageMutation] = useMutation(SET_SPEAKING_LANGUAGE);
+
   const setUserCaptionLocale = (captionLocale: string, provider: string) => {
     setCaptionLocaleMutation({
       variables: {
@@ -92,36 +107,81 @@ const AudioCaptionsButton: React.FC<AudioCaptionsButtonProps> = ({
       },
     });
   };
+
+  const setUserSpeakingLanguage = (locale: string) => {
+    setSpeakingLanguageMutation({
+      variables: {
+        locale,
+      },
+    });
+  };
+
   const isCaptionLocaleSet = () => currentCaptionLocale === DISABLED;
   const fallbackLocale = availableVoices.includes(navigator.language)
     ? navigator.language
-    : 'en-US'; // Assuming 'en-US' is the default fallback locale
+    : 'en-US';
 
   const getSelectedLocaleValue = isCaptionLocaleSet()
     ? fallbackLocale
     : currentCaptionLocale;
 
-  const selectedLocale = useRef(getSelectedLocaleValue);
+  const selectedCaptionLocale = useRef(getSelectedLocaleValue);
+  const selectedSpeakingLanguage = useRef(currentSpeakingLanguage || 'en-US');
 
   useEffect(() => {
-    if (!isCaptionLocaleSet()) selectedLocale.current = getSelectedLocaleValue;
+    if (!isCaptionLocaleSet()) selectedCaptionLocale.current = getSelectedLocaleValue;
   }, [currentCaptionLocale]);
+
+  useEffect(() => {
+    if (currentSpeakingLanguage) selectedSpeakingLanguage.current = currentSpeakingLanguage;
+  }, [currentSpeakingLanguage]);
 
   const shouldRenderChevron = isSupported;
   const shouldRenderSelector = isSupported && availableVoices.length > 0;
 
   const isAudioTranscriptionEnabled = AudioCaptionsService.useIsAudioTranscriptionEnabled();
+
+  // Build "I speak" language options
+  const getSpeakingLanguageOptions = (): (MenuOptionItemType | MenuSeparatorItemType)[] => {
+    return getTranslationLanguages().map((lang) => ({
+      icon: '',
+      label: lang.name,
+      key: `speak-${lang.locale}`,
+      iconRight: selectedSpeakingLanguage.current === lang.locale ? 'check' : null,
+      customStyles: (selectedSpeakingLanguage.current === lang.locale) && Styled.SelectedLabel,
+      onClick: () => {
+        selectedSpeakingLanguage.current = lang.locale;
+        setUserSpeakingLanguage(lang.locale);
+      },
+    }));
+  };
+
+  // Build "Show captions in" language options
+  const getCaptionLanguageOptions = (): (MenuOptionItemType | MenuSeparatorItemType)[] => {
+    return getTranslationLanguages().map((lang) => ({
+      icon: '',
+      label: lang.name,
+      key: `caption-${lang.locale}`,
+      iconRight: selectedCaptionLocale.current === lang.locale ? 'check' : null,
+      customStyles: (selectedCaptionLocale.current === lang.locale) && Styled.SelectedLabel,
+      onClick: () => {
+        selectedCaptionLocale.current = lang.locale;
+        setUserLocaleProperty(lang.locale, setUserCaptionLocale);
+      },
+    }));
+  };
+
   const autoLanguage = AudioCaptionsService.isGladia() ? {
     icon: '',
     label: intl.formatMessage(intlMessages.autoDetect),
     key: 'auto',
-    iconRight: selectedLocale.current === 'auto' ? 'check' : null,
-    customStyles: (selectedLocale.current === 'auto') && Styled.SelectedLabel,
+    iconRight: selectedCaptionLocale.current === 'auto' ? 'check' : null,
+    customStyles: (selectedCaptionLocale.current === 'auto') && Styled.SelectedLabel,
     disabled: !isAudioTranscriptionEnabled,
     dividerTop: true,
     onClick: () => {
-      selectedLocale.current = 'auto';
-      AudioCaptionsService.setSpeechLocale(selectedLocale.current, setUserCaptionLocale);
+      selectedCaptionLocale.current = 'auto';
+      AudioCaptionsService.setSpeechLocale(selectedCaptionLocale.current, setUserCaptionLocale);
     },
   } : undefined;
 
@@ -143,13 +203,13 @@ const AudioCaptionsButton: React.FC<AudioCaptionsButtonProps> = ({
             icon: '',
             label,
             key: availableVoice,
-            iconRight: selectedLocale.current === availableVoice ? 'check' : null,
-            customStyles: (selectedLocale.current === availableVoice) && Styled.SelectedLabel,
+            iconRight: selectedCaptionLocale.current === availableVoice ? 'check' : null,
+            customStyles: (selectedCaptionLocale.current === availableVoice) && Styled.SelectedLabel,
             disabled: !isAudioTranscriptionEnabled,
             dividerTop: !AudioCaptionsService.isGladia() && availableVoice === availableVoices[0],
             onClick: () => {
-              selectedLocale.current = availableVoice;
-              setUserLocaleProperty(selectedLocale.current, setUserCaptionLocale);
+              selectedCaptionLocale.current = availableVoice;
+              setUserLocaleProperty(selectedCaptionLocale.current, setUserCaptionLocale);
             },
           }
         );
@@ -172,53 +232,72 @@ const AudioCaptionsButton: React.FC<AudioCaptionsButtonProps> = ({
       return localeName !== '' ? {
         key: caption,
         label: localeName,
-        customStyles: (selectedLocale.current === caption) && Styled.SelectedLabel,
-        iconRight: selectedLocale.current === caption ? 'check' : null,
+        customStyles: (selectedCaptionLocale.current === caption) && Styled.SelectedLabel,
+        iconRight: selectedCaptionLocale.current === caption ? 'check' : null,
         onClick: () => {
-          selectedLocale.current = caption;
-          setUserLocaleProperty(selectedLocale.current, setUserCaptionLocale);
+          selectedCaptionLocale.current = caption;
+          setUserLocaleProperty(selectedCaptionLocale.current, setUserCaptionLocale);
         },
       } : null;
     });
   };
 
   const getAvailableLocalesList = () => {
-    // audio captions
-    if (shouldRenderChevron) {
-      return [{
-        key: 'availableLocalesList',
-        label: intl.formatMessage(intlMessages.language),
-        customStyles: Styled.TitleLabel,
-        disabled: true,
-      },
-      autoLanguage,
-      ...getAvailableLocales(),
+    // Build menu with two sections: "I speak" and "Show captions in"
+    const menuItems: (MenuOptionItemType | MenuSeparatorItemType | undefined)[] = [
+      // "I speak" section header
       {
-        key: 'divider',
-        label: intl.formatMessage(intlMessages.transcription),
+        key: 'iSpeakHeader',
+        label: intl.formatMessage(intlMessages.iSpeak),
         customStyles: Styled.TitleLabel,
         disabled: true,
       },
       {
-        key: 'separator-02',
+        key: 'separator-speak-start',
         isSeparator: true,
-      }].filter((e) => e);
+      },
+      ...getSpeakingLanguageOptions(),
+      // "Show captions in" section header
+      {
+        key: 'showCaptionsInHeader',
+        label: intl.formatMessage(intlMessages.showCaptionsIn),
+        customStyles: Styled.TitleLabel,
+        disabled: true,
+      },
+      {
+        key: 'separator-caption-start',
+        isSeparator: true,
+      },
+      ...getCaptionLanguageOptions(),
+    ];
+
+    // Add transcription section for audio captions
+    if (shouldRenderChevron) {
+      menuItems.push(
+        {
+          key: 'transcriptionHeader',
+          label: intl.formatMessage(intlMessages.transcription),
+          customStyles: Styled.TitleLabel,
+          disabled: true,
+        },
+        {
+          key: 'separator-transcription',
+          isSeparator: true,
+        },
+      );
+      if (autoLanguage) {
+        menuItems.push(autoLanguage);
+      }
+      menuItems.push(...getAvailableLocales());
     }
 
-    // typed captions
-    return [{
-      key: 'availableLocalesList',
-      label: intl.formatMessage(intlMessages.language),
-      customStyles: Styled.TitleLabel,
-      disabled: true,
-    },
-    ...getAvailableCaptions(),
-    ];
+    return menuItems.filter((e) => e);
   };
+
   const onToggleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!currentCaptionLocale && !active) {
-      setUserCaptionLocale(availableVoices[0], PROVIDER);
+      setUserCaptionLocale(availableVoices[0] || 'en-US', PROVIDER);
     }
     setAudioCaptions(!active);
   };
@@ -280,6 +359,7 @@ const AudioCaptionsButtonContainer: React.FC = () => {
       captionLocale: user.captionLocale,
       voice: user.voice,
       speechLocale: user.speechLocale,
+      speakingLanguage: user.speakingLanguage,
     }),
   );
 
@@ -304,6 +384,7 @@ const AudioCaptionsButtonContainer: React.FC = () => {
 
   const availableVoices = activeCaptionsData.caption_activeLocales.map((caption) => caption.locale);
   const currentCaptionLocale = currentUser.captionLocale || '';
+  const currentSpeakingLanguage = currentUser.speakingLanguage || 'en-US';
   const isSupported = availableVoices.length > 0;
 
   if (!currentMeetingData?.componentsFlags?.hasCaption) return null;
@@ -313,6 +394,7 @@ const AudioCaptionsButtonContainer: React.FC = () => {
       isRTL={isRTL}
       availableVoices={availableVoices}
       currentCaptionLocale={currentCaptionLocale}
+      currentSpeakingLanguage={currentSpeakingLanguage}
       isSupported={isSupported}
     />
   );

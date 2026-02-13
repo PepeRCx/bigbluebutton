@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { useMutation, useReactiveVar } from '@apollo/client';
 import AudioCaptionsLiveContainer from '/imports/ui/components/audio/audio-graphql/audio-captions/live/component';
+import { TTSController } from '/imports/ui/components/audio/audio-graphql/audio-captions/tts';
 import getFromUserSettings from '/imports/ui/services/users-settings';
 import {
   useIsPresentationEnabled,
@@ -161,7 +162,12 @@ const AppContainer = (props) => {
           layoutContextDispatch,
           isPollingEnabled,
           genericMainContentId: genericMainContent.genericContentId,
-          audioCaptions: <AudioCaptionsLiveContainer />,
+          audioCaptions: (
+            <>
+              <AudioCaptionsLiveContainer />
+              <TTSController />
+            </>
+          ),
           hideNotificationToasts: hideNotificationToasts
             || getFromUserSettings('bbb_hide_notifications', false),
           darkTheme,

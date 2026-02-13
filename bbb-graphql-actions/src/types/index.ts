@@ -9,3 +9,6 @@ export interface RedisMessage {
     header: Record<string, unknown>;
     body: Record<string, unknown>;
 }
+
+// Support for actions that return multiple messages (e.g., caption translation)
+export type RedisMessageOrArray = RedisMessage | RedisMessage[];
