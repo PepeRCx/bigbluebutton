@@ -16,11 +16,63 @@ interface VoiceConfig {
 }
 
 export const VOICE_MAPPINGS: Record<string, VoiceConfig> = {
+  // Original 5 languages
   'en-US': { name: 'en-US-AvaNeural', lang: 'en-US', gender: 'Female' },
   'es-ES': { name: 'es-ES-ElviraNeural', lang: 'es-ES', gender: 'Female' },
   'pt-BR': { name: 'pt-BR-FranciscaNeural', lang: 'pt-BR', gender: 'Female' },
   'de-DE': { name: 'de-DE-KatjaNeural', lang: 'de-DE', gender: 'Female' },
   'fr-FR': { name: 'fr-FR-DeniseNeural', lang: 'fr-FR', gender: 'Female' },
+
+  // European languages
+  'ru-RU': { name: 'ru-RU-SvetlanaNeural', lang: 'ru-RU', gender: 'Female' },
+  'it-IT': { name: 'it-IT-ElsaNeural', lang: 'it-IT', gender: 'Female' },
+  'pl-PL': { name: 'pl-PL-ZofiaNeural', lang: 'pl-PL', gender: 'Female' },
+  'nl-NL': { name: 'nl-NL-ColetteNeural', lang: 'nl-NL', gender: 'Female' },
+  'uk-UA': { name: 'uk-UA-PolinaNeural', lang: 'uk-UA', gender: 'Female' },
+  'ro-RO': { name: 'ro-RO-AlinaNeural', lang: 'ro-RO', gender: 'Female' },
+  'el-GR': { name: 'el-GR-AthinaNeural', lang: 'el-GR', gender: 'Female' },
+  'cs-CZ': { name: 'cs-CZ-VlastaNeural', lang: 'cs-CZ', gender: 'Female' },
+  'hu-HU': { name: 'hu-HU-NoemiNeural', lang: 'hu-HU', gender: 'Female' },
+  'sv-SE': { name: 'sv-SE-SofieNeural', lang: 'sv-SE', gender: 'Female' },
+  'da-DK': { name: 'da-DK-ChristelNeural', lang: 'da-DK', gender: 'Female' },
+  'nb-NO': { name: 'nb-NO-PernilleNeural', lang: 'nb-NO', gender: 'Female' },
+  'fi-FI': { name: 'fi-FI-NooraNeural', lang: 'fi-FI', gender: 'Female' },
+  'bg-BG': { name: 'bg-BG-KalinaNeural', lang: 'bg-BG', gender: 'Female' },
+  'sr-RS': { name: 'sr-RS-SophieNeural', lang: 'sr-RS', gender: 'Female' },
+  'hr-HR': { name: 'hr-HR-GabrijelaNeural', lang: 'hr-HR', gender: 'Female' },
+  'sk-SK': { name: 'sk-SK-ViktoriaNeural', lang: 'sk-SK', gender: 'Female' },
+  'lt-LT': { name: 'lt-LT-OnaNeural', lang: 'lt-LT', gender: 'Female' },
+  'lv-LV': { name: 'lv-LV-EveritaNeural', lang: 'lv-LV', gender: 'Female' },
+  'et-EE': { name: 'et-EE-AnuNeural', lang: 'et-EE', gender: 'Female' },
+  'sl-SI': { name: 'sl-SI-PetraNeural', lang: 'sl-SI', gender: 'Female' },
+  'is-IS': { name: 'is-IS-GudrunNeural', lang: 'is-IS', gender: 'Female' },
+
+  // Asian languages
+  'zh-CN': { name: 'zh-CN-XiaoxiaoNeural', lang: 'zh-CN', gender: 'Female' },
+  'ja-JP': { name: 'ja-JP-NanamiNeural', lang: 'ja-JP', gender: 'Female' },
+  'ko-KR': { name: 'ko-KR-SunHiNeural', lang: 'ko-KR', gender: 'Female' },
+  'hi-IN': { name: 'hi-IN-SwaraNeural', lang: 'hi-IN', gender: 'Female' },
+  'bn-IN': { name: 'bn-IN-TanishaaNeural', lang: 'bn-IN', gender: 'Female' },
+  'ta-IN': { name: 'ta-IN-PallaviNeural', lang: 'ta-IN', gender: 'Female' },
+  'te-IN': { name: 'te-IN-ShrutiNeural', lang: 'te-IN', gender: 'Female' },
+  'mr-IN': { name: 'mr-IN-AarohiNeural', lang: 'mr-IN', gender: 'Female' },
+  'th-TH': { name: 'th-TH-PremwadeeNeural', lang: 'th-TH', gender: 'Female' },
+  'vi-VN': { name: 'vi-VN-HoaiMyNeural', lang: 'vi-VN', gender: 'Female' },
+  'id-ID': { name: 'id-ID-GadisNeural', lang: 'id-ID', gender: 'Female' },
+  'ms-MY': { name: 'ms-MY-YasminNeural', lang: 'ms-MY', gender: 'Female' },
+  'fil-PH': { name: 'fil-PH-BlessicaNeural', lang: 'fil-PH', gender: 'Female' },
+
+  // Middle Eastern and other languages
+  'ar-SA': { name: 'ar-SA-ZariyahNeural', lang: 'ar-SA', gender: 'Female' },
+  'tr-TR': { name: 'tr-TR-EmelNeural', lang: 'tr-TR', gender: 'Female' },
+  'he-IL': { name: 'he-IL-HilaNeural', lang: 'he-IL', gender: 'Female' },
+  'fa-IR': { name: 'fa-IR-DilaraNeural', lang: 'fa-IR', gender: 'Female' },
+  'ur-PK': { name: 'ur-PK-UzmaNeural', lang: 'ur-PK', gender: 'Female' },
+  'sw-KE': { name: 'sw-KE-ZuriNeural', lang: 'sw-KE', gender: 'Female' },
+  'ka-GE': { name: 'ka-GE-EkaNeural', lang: 'ka-GE', gender: 'Female' },
+  'hy-AM': { name: 'hy-AM-AnahitNeural', lang: 'hy-AM', gender: 'Female' },
+  'az-AZ': { name: 'az-AZ-BanuNeural', lang: 'az-AZ', gender: 'Female' },
+  'kk-KZ': { name: 'kk-KZ-AigulNeural', lang: 'kk-KZ', gender: 'Female' },
 };
 
 /**

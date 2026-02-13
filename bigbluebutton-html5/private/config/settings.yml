@@ -27,7 +27,7 @@ public:
     enableDynamicAudioDeviceSelection: true
     #
     skipEchoTestIfPreviousDevice: false
-    clientTitle: BigBlueButton
+    clientTitle: tim-ai
     appName: BigBlueButton HTML5 Client
     bbbServerVersion: HTML5_FULL_BBB_VERSION
     displayBbbServerVersion: true
@@ -107,12 +107,51 @@ public:
           - en-US
           - es-ES
           - fr-FR
-        # - hi-IN
-        # - it-IT
-        # - ja-JP
           - pt-BR
-        # - ru-RU
-        # - zh-CN
+          - ru-RU
+          - it-IT
+          - pl-PL
+          - nl-NL
+          - uk-UA
+          - ro-RO
+          - el-GR
+          - cs-CZ
+          - hu-HU
+          - sv-SE
+          - da-DK
+          - nb-NO
+          - fi-FI
+          - bg-BG
+          - sr-RS
+          - hr-HR
+          - sk-SK
+          - lt-LT
+          - et-EE
+          - sl-SI
+          - is-IS
+          - zh-CN
+          - hi-IN
+          - ar-SA
+          - ja-JP
+          - bn-IN
+          - ur-PK
+          - id-ID
+          - sw-KE
+          - mr-IN
+          - te-IN
+          - tr-TR
+          - ko-KR
+          - ta-IN
+          - vi-VN
+          - th-TH
+          - fa-IR
+          - fil-PH
+          - ms-MY
+          - he-IL
+          - ka-GE
+          - hy-AM
+          - az-AZ
+          - kk-KZ
         # If true, automatically uses the below locale field content as transcription language
         # and the language selector in audio modal won't show up!
         forceLocale: false
@@ -145,6 +184,141 @@ public:
           - locale: fr-FR
             name: French
             azureCode: fr
+          - locale: ru-RU
+            name: Russian
+            azureCode: ru
+          - locale: it-IT
+            name: Italian
+            azureCode: it
+          - locale: pl-PL
+            name: Polish
+            azureCode: pl
+          - locale: nl-NL
+            name: Dutch
+            azureCode: nl
+          - locale: uk-UA
+            name: Ukrainian
+            azureCode: uk
+          - locale: ro-RO
+            name: Romanian
+            azureCode: ro
+          - locale: el-GR
+            name: Greek
+            azureCode: el
+          - locale: cs-CZ
+            name: Czech
+            azureCode: cs
+          - locale: hu-HU
+            name: Hungarian
+            azureCode: hu
+          - locale: sv-SE
+            name: Swedish
+            azureCode: sv
+          - locale: da-DK
+            name: Danish
+            azureCode: da
+          - locale: nb-NO
+            name: Norwegian
+            azureCode: nb
+          - locale: fi-FI
+            name: Finnish
+            azureCode: fi
+          - locale: bg-BG
+            name: Bulgarian
+            azureCode: bg
+          - locale: sr-RS
+            name: Serbian
+            azureCode: sr
+          - locale: hr-HR
+            name: Croatian
+            azureCode: hr
+          - locale: sk-SK
+            name: Slovak
+            azureCode: sk
+          - locale: lt-LT
+            name: Lithuanian
+            azureCode: lt
+          - locale: lv-LV
+            name: Latvian
+            azureCode: lv
+          - locale: et-EE
+            name: Estonian
+            azureCode: et
+          - locale: sl-SI
+            name: Slovenian
+            azureCode: sl
+          - locale: is-IS
+            name: Icelandic
+            azureCode: is
+          - locale: zh-CN
+            name: Chinese (Simplified)
+            azureCode: zh-Hans
+          - locale: hi-IN
+            name: Hindi
+            azureCode: hi
+          - locale: ar-SA
+            name: Arabic
+            azureCode: ar
+          - locale: ja-JP
+            name: Japanese
+            azureCode: ja
+          - locale: bn-IN
+            name: Bengali
+            azureCode: bn
+          - locale: ur-PK
+            name: Urdu
+            azureCode: ur
+          - locale: id-ID
+            name: Indonesian
+            azureCode: id
+          - locale: sw-KE
+            name: Swahili
+            azureCode: sw
+          - locale: mr-IN
+            name: Marathi
+            azureCode: mr
+          - locale: te-IN
+            name: Telugu
+            azureCode: te
+          - locale: tr-TR
+            name: Turkish
+            azureCode: tr
+          - locale: ko-KR
+            name: Korean
+            azureCode: ko
+          - locale: ta-IN
+            name: Tamil
+            azureCode: ta
+          - locale: vi-VN
+            name: Vietnamese
+            azureCode: vi
+          - locale: th-TH
+            name: Thai
+            azureCode: th
+          - locale: fa-IR
+            name: Persian
+            azureCode: fa
+          - locale: fil-PH
+            name: Filipino
+            azureCode: fil
+          - locale: ms-MY
+            name: Malay
+            azureCode: ms
+          - locale: he-IL
+            name: Hebrew
+            azureCode: he
+          - locale: ka-GE
+            name: Georgian
+            azureCode: ka
+          - locale: hy-AM
+            name: Armenian
+            azureCode: hy
+          - locale: az-AZ
+            name: Azerbaijani
+            azureCode: az
+          - locale: kk-KZ
+            name: Kazakh
+            azureCode: kk
     mutedAlert:
       enabled: true
       interval: 200

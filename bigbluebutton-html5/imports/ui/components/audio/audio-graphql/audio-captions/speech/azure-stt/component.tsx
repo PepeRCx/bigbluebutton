@@ -10,7 +10,7 @@ import useIsAudioConnected from '/imports/ui/components/audio/audio-graphql/hook
 import logger from '/imports/startup/client/logger';
 import Auth from '/imports/ui/services/auth';
 
-const AUDIO_SAMPLE_RATE = 16000;
+const TARGET_SAMPLE_RATE = 16000;
 const BUFFER_SIZE = 4096;
 
 interface AzureSTTProviderProps {
@@ -41,10 +41,21 @@ const AzureSTTProvider: React.FC<AzureSTTProviderProps> = ({
     return `${protocol}//${host}/stt/ws?meetingId=${meetingId}&moderatorUserId=${moderatorUserId}&senderUserId=${senderUserId}&locale=${localeRef.current}`;
   }, []);
 
-  const convertFloat32ToInt16 = (float32Array: Float32Array): Int16Array => {
-    const int16Array = new Int16Array(float32Array.length);
-    for (let i = 0; i < float32Array.length; i += 1) {
-      const sample = Math.max(-1, Math.min(1, float32Array[i]));
+  const downsampleAndConvertToInt16 = (
+    float32Array: Float32Array,
+    inputSampleRate: number,
+  ): Int16Array => {
+    const ratio = inputSampleRate / TARGET_SAMPLE_RATE;
+    const outputLength = Math.floor(float32Array.length / ratio);
+    const int16Array = new Int16Array(outputLength);
+    for (let i = 0; i < outputLength; i += 1) {
+      const srcIndex = i * ratio;
+      const srcIndexFloor = Math.floor(srcIndex);
+      const srcIndexCeil = Math.min(srcIndexFloor + 1, float32Array.length - 1);
+      const frac = srcIndex - srcIndexFloor;
+      const interpolated = float32Array[srcIndexFloor] * (1 - frac)
+        + float32Array[srcIndexCeil] * frac;
+      const sample = Math.max(-1, Math.min(1, interpolated));
       int16Array[i] = sample < 0 ? sample * 0x8000 : sample * 0x7fff;
     }
     return int16Array;
@@ -65,8 +76,9 @@ const AzureSTTProvider: React.FC<AzureSTTProviderProps> = ({
       const clonedStream = inputStream.clone();
       streamRef.current = clonedStream;
 
-      // Create AudioContext with target sample rate
-      const audioContext = new AudioContext({ sampleRate: AUDIO_SAMPLE_RATE });
+      // Use the browser's native sample rate to match the input stream;
+      // audio will be downsampled to TARGET_SAMPLE_RATE before sending
+      const audioContext = new AudioContext();
       audioContextRef.current = audioContext;
 
       // Create source from cloned stream
@@ -83,7 +95,7 @@ const AzureSTTProvider: React.FC<AzureSTTProviderProps> = ({
         }
 
         const inputData = event.inputBuffer.getChannelData(0);
-        const int16Data = convertFloat32ToInt16(inputData);
+        const int16Data = downsampleAndConvertToInt16(inputData, audioContext.sampleRate);
 
         // Send audio data as binary
         wsRef.current.send(int16Data.buffer);
