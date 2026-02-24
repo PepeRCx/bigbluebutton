@@ -12,7 +12,7 @@ import {
   getLocaleName,
 } from '../service';
 import useCurrentUser from '/imports/ui/core/hooks/useCurrentUser';
-import { SET_SPEECH_LOCALE } from '/imports/ui/core/graphql/mutations/userMutations';
+import { SET_SPEECH_LOCALE, SET_CAPTION_LOCALE, SET_SPEAKING_LANGUAGE } from '/imports/ui/core/graphql/mutations/userMutations';
 import Styled from './styles';
 import { TRANSCRIPTION_LOCALE } from '/imports/ui/components/audio/audio-graphql/audio-captions/transcriptionLocale';
 
@@ -65,6 +65,8 @@ const AudioCaptionsSelect: React.FC<AudioCaptionsSelectProps> = ({
   const useLocaleHook = useFixedLocale();
   const intl = useIntl();
   const [setSpeechLocaleMutation] = useMutation(SET_SPEECH_LOCALE);
+  const [setCaptionLocaleMutation] = useMutation(SET_CAPTION_LOCALE);
+  const [setSpeakingLanguageMutation] = useMutation(SET_SPEAKING_LANGUAGE);
 
   const setUserSpeechLocale = (speechLocale: string, provider: string) => {
     // When speechLocale is '' we disable the transcription provider
@@ -72,6 +74,19 @@ const AudioCaptionsSelect: React.FC<AudioCaptionsSelectProps> = ({
       variables: {
         locale: speechLocale,
         provider: speechLocale !== '' ? provider : '',
+      },
+    });
+
+    // Sync captionLocale and speakingLanguage to the same value
+    setCaptionLocaleMutation({
+      variables: {
+        locale: speechLocale,
+        provider: speechLocale !== '' ? provider : '',
+      },
+    });
+    setSpeakingLanguageMutation({
+      variables: {
+        locale: speechLocale || 'en-US',
       },
     });
   };
