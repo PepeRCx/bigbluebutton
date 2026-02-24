@@ -13,7 +13,7 @@ import {
 import { MenuSeparatorItemType, MenuOptionItemType } from '/imports/ui/components/common/menu/menuTypes';
 import useAudioCaptionEnable from '/imports/ui/core/local-states/useAudioCaptionEnable';
 import { User } from '/imports/ui/Types/user';
-import { SET_CAPTION_LOCALE, SET_SPEAKING_LANGUAGE } from '/imports/ui/core/graphql/mutations/userMutations';
+import { SET_CAPTION_LOCALE } from '/imports/ui/core/graphql/mutations/userMutations';
 import useMeeting from '/imports/ui/core/hooks/useMeeting';
 import { ActiveCaptionsResponse, getactiveCaptions } from './queries';
 import AudioCaptionsService from '/imports/ui/components/audio/audio-graphql/audio-captions/service';
@@ -54,10 +54,6 @@ const messages: { [key: string]: { id: string; description?: string } } = {
     id: 'app.audio.captions.button.autoDetect',
     description: 'Audio speech recognition language auto detect',
   },
-  iSpeak: {
-    id: 'app.audio.captions.button.iSpeak',
-    description: 'I speak language selector label',
-  },
   showCaptionsIn: {
     id: 'app.audio.captions.button.showCaptionsIn',
     description: 'Show captions in language selector label',
@@ -78,7 +74,6 @@ interface AudioCaptionsButtonProps {
   isRTL: boolean;
   availableVoices: string[];
   currentCaptionLocale: string;
-  currentSpeakingLanguage: string;
   isSupported: boolean;
 }
 
@@ -87,7 +82,6 @@ const DISABLED = '';
 const AudioCaptionsButton: React.FC<AudioCaptionsButtonProps> = ({
   isRTL,
   currentCaptionLocale,
-  currentSpeakingLanguage,
   availableVoices,
   isSupported,
 }) => {
@@ -97,21 +91,12 @@ const AudioCaptionsButton: React.FC<AudioCaptionsButtonProps> = ({
   const intl = useIntl();
   const [active] = useAudioCaptionEnable();
   const [setCaptionLocaleMutation] = useMutation(SET_CAPTION_LOCALE);
-  const [setSpeakingLanguageMutation] = useMutation(SET_SPEAKING_LANGUAGE);
 
   const setUserCaptionLocale = (captionLocale: string, provider: string) => {
     setCaptionLocaleMutation({
       variables: {
         locale: captionLocale,
         provider,
-      },
-    });
-  };
-
-  const setUserSpeakingLanguage = (locale: string) => {
-    setSpeakingLanguageMutation({
-      variables: {
-        locale,
       },
     });
   };
@@ -126,35 +111,15 @@ const AudioCaptionsButton: React.FC<AudioCaptionsButtonProps> = ({
     : currentCaptionLocale;
 
   const selectedCaptionLocale = useRef(getSelectedLocaleValue);
-  const selectedSpeakingLanguage = useRef(currentSpeakingLanguage || 'en-US');
 
   useEffect(() => {
     if (!isCaptionLocaleSet()) selectedCaptionLocale.current = getSelectedLocaleValue;
   }, [currentCaptionLocale]);
 
-  useEffect(() => {
-    if (currentSpeakingLanguage) selectedSpeakingLanguage.current = currentSpeakingLanguage;
-  }, [currentSpeakingLanguage]);
-
   const shouldRenderChevron = isSupported;
   const shouldRenderSelector = isSupported && availableVoices.length > 0;
 
   const isAudioTranscriptionEnabled = AudioCaptionsService.useIsAudioTranscriptionEnabled();
-
-  // Build "I speak" language options
-  const getSpeakingLanguageOptions = (): (MenuOptionItemType | MenuSeparatorItemType)[] => {
-    return getTranslationLanguages().map((lang) => ({
-      icon: '',
-      label: lang.name,
-      key: `speak-${lang.locale}`,
-      iconRight: selectedSpeakingLanguage.current === lang.locale ? 'check' : null,
-      customStyles: (selectedSpeakingLanguage.current === lang.locale) && Styled.SelectedLabel,
-      onClick: () => {
-        selectedSpeakingLanguage.current = lang.locale;
-        setUserSpeakingLanguage(lang.locale);
-      },
-    }));
-  };
 
   // Build "Show captions in" language options
   const getCaptionLanguageOptions = (): (MenuOptionItemType | MenuSeparatorItemType)[] => {
@@ -243,20 +208,7 @@ const AudioCaptionsButton: React.FC<AudioCaptionsButtonProps> = ({
   };
 
   const getAvailableLocalesList = () => {
-    // Build menu with two sections: "I speak" and "Show captions in"
     const menuItems: (MenuOptionItemType | MenuSeparatorItemType | undefined)[] = [
-      // "I speak" section header
-      {
-        key: 'iSpeakHeader',
-        label: intl.formatMessage(intlMessages.iSpeak),
-        customStyles: Styled.TitleLabel,
-        disabled: true,
-      },
-      {
-        key: 'separator-speak-start',
-        isSeparator: true,
-      },
-      ...getSpeakingLanguageOptions(),
       // "Show captions in" section header
       {
         key: 'showCaptionsInHeader',
@@ -359,7 +311,6 @@ const AudioCaptionsButtonContainer: React.FC = () => {
       captionLocale: user.captionLocale,
       voice: user.voice,
       speechLocale: user.speechLocale,
-      speakingLanguage: user.speakingLanguage,
     }),
   );
 
@@ -384,7 +335,6 @@ const AudioCaptionsButtonContainer: React.FC = () => {
 
   const availableVoices = activeCaptionsData.caption_activeLocales.map((caption) => caption.locale);
   const currentCaptionLocale = currentUser.captionLocale || '';
-  const currentSpeakingLanguage = currentUser.speakingLanguage || 'en-US';
   const isSupported = availableVoices.length > 0;
 
   if (!currentMeetingData?.componentsFlags?.hasCaption) return null;
@@ -394,7 +344,6 @@ const AudioCaptionsButtonContainer: React.FC = () => {
       isRTL={isRTL}
       availableVoices={availableVoices}
       currentCaptionLocale={currentCaptionLocale}
-      currentSpeakingLanguage={currentSpeakingLanguage}
       isSupported={isSupported}
     />
   );
