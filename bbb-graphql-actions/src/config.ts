@@ -97,3 +97,33 @@ if (AZURE_STT_ENABLED) {
 } else {
     console.info('[Config] Azure STT is disabled.');
 }
+
+// Tim AI (OmniVoice) TTS (Text-to-Speech) Configuration
+export const TIMAI_TTS_ENABLED = process.env.TIMAI_TTS_ENABLED !== 'false'
+    && (bbbProperties['timai.tts.enabled'] !== 'false');
+
+export const TIMAI_TTS_URL = process.env.TIMAI_TTS_URL
+    || bbbProperties['timai.tts.url']
+    || 'http://localhost:8000/api/v1/tts';
+
+if (TIMAI_TTS_ENABLED) {
+    console.info('[Config] Tim AI TTS enabled.');
+    console.info(`[Config] Tim AI TTS URL: ${TIMAI_TTS_URL}`);
+} else {
+    console.info('[Config] Tim AI TTS is disabled.');
+}
+
+// Tim AI (OmniVoice) STT (Speech-to-Text) Configuration
+export const TIMAI_STT_ENABLED = process.env.TIMAI_STT_ENABLED !== 'false'
+    && (bbbProperties['timai.stt.enabled'] !== 'false');
+
+export const TIMAI_STT_URL = process.env.TIMAI_STT_URL
+    || bbbProperties['timai.stt.url']
+    || 'ws://localhost:8000/api/v1/stt-stream';
+
+if (TIMAI_STT_ENABLED) {
+    console.info('[Config] Tim AI STT enabled.');
+    console.info(`[Config] Tim AI STT URL: ${TIMAI_STT_URL}`);
+} else {
+    console.info('[Config] Tim AI STT is disabled.');
+}
