@@ -9,6 +9,9 @@ import { ValidationError } from './types/ValidationError';
 import { synthesizeSpeech, isAzureTTSEnabled } from './services/azureTTS';
 import { isAzureSTTEnabled } from './services/azureSpeechToText';
 import { initializeSTTWebSocket, getActiveConnectionCount } from './websocket/sttHandler';
+import { synthesizeSpeech as timaiSynthesizeSpeech, isTimAITtsEnabled } from './services/timaiTTS';
+import { isTimAISttEnabled } from './services/timaiSTT';
+import { initializeTimAISttWebSocket, getActiveConnectionCount as getTimAIActiveConnectionCount } from './websocket/timaiSttHandler';
 
 // Initialize Express Application
 const app = express();
@@ -24,6 +27,12 @@ const redisClient = createRedisClient();
 const wss = new WebSocketServer({
   server,
   path: '/stt/ws',
+});
+
+// Create WebSocket server for Tim AI STT on path /tim-ai/stt/ws
+const timaiWss = new WebSocketServer({
+  server,
+  path: '/tim-ai/stt/ws',
 });
 
 /**
@@ -165,6 +174,74 @@ app.get('/stt/health', (req: Request, res: Response) => {
   });
 });
 
+/**
+ * Tim AI TTS (Text-to-Speech) endpoint for voice translation
+ * Receives text and locale, returns audio as base64
+ */
+app.post('/tim-ai/tts', async (req: Request, res: Response) => {
+  try {
+    const { text, locale } = req.body;
+
+    if (!text || typeof text !== 'string') {
+      res.status(400).json({ success: false, error: 'Missing or invalid text parameter' });
+      return;
+    }
+
+    if (!locale || typeof locale !== 'string') {
+      res.status(400).json({ success: false, error: 'Missing or invalid locale parameter' });
+      return;
+    }
+
+    if (!isTimAITtsEnabled()) {
+      res.status(503).json({ success: false, error: 'Tim AI TTS service is not available' });
+      return;
+    }
+
+    if (DEBUG) {
+      console.debug('[TimAI-TTS] Request:', { text: text.substring(0, 50), locale });
+    }
+
+    const result = await timaiSynthesizeSpeech(text, locale);
+
+    if (result.success && result.audio) {
+      res.status(200).json({
+        success: true,
+        audio: result.audio,
+        contentType: result.contentType || 'audio/wav',
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        error: result.error || 'Tim AI TTS synthesis failed',
+      });
+    }
+  } catch (error) {
+    console.error('[TimAI-TTS] Error:', error);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+/**
+ * Health check endpoint for Tim AI TTS service
+ */
+app.get('/tim-ai/tts/health', (req: Request, res: Response) => {
+  res.status(200).json({
+    enabled: isTimAITtsEnabled(),
+    service: 'timai-tts',
+  });
+});
+
+/**
+ * Health check endpoint for Tim AI STT service
+ */
+app.get('/tim-ai/stt/health', (req: Request, res: Response) => {
+  res.status(200).json({
+    enabled: isTimAISttEnabled(),
+    service: 'timai-stt',
+    activeConnections: getTimAIActiveConnectionCount(),
+  });
+});
+
 // Start the server and establish a connection to Redis.
 const startServer = () => {
   console.info("Starting server");
@@ -178,9 +255,10 @@ const startServer = () => {
 // Initialize WebSocket handler for STT after Redis is connected
 redisClient.on('connect', () => {
   console.info("Connected with Redis");
-  // Initialize STT WebSocket with Redis client
   // @ts-ignore - RedisClient type compatibility
   initializeSTTWebSocket(wss, redisClient);
+  // @ts-ignore - RedisClient type compatibility
+  initializeTimAISttWebSocket(timaiWss, redisClient);
 });
 redisClient.on('disconnect', () => console.info("Disconnected from Redis"));
 
