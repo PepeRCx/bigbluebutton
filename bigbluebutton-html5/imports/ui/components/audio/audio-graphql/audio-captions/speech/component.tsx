@@ -23,11 +23,13 @@ import useCurrentUser from '/imports/ui/core/hooks/useCurrentUser';
 import {
   isWebSpeechApi,
   isAzure,
+  isTimAi,
   setUserLocaleProperty,
   setSpeechLocale,
   useIsAudioTranscriptionEnabled,
 } from '../service';
 import AzureSTTProviderContainer from './azure-stt/component';
+import TimAISttProviderContainer from './timai-stt/component';
 import { SET_SPEECH_LOCALE } from '/imports/ui/core/graphql/mutations/userMutations';
 import { SUBMIT_TEXT } from './mutations';
 import useIsAudioConnected from '/imports/ui/components/audio/audio-graphql/hooks/useIsAudioConnected';
@@ -367,6 +369,11 @@ const AudioCaptionsSpeechContainer: React.FC = () => {
   // Azure provider uses its own component for audio capture and streaming
   if (isAzure()) {
     return <AzureSTTProviderContainer />;
+  }
+
+  // Tim AI provider uses its own component for audio capture and streaming
+  if (isTimAi()) {
+    return <TimAISttProviderContainer />;
   }
 
   return (
