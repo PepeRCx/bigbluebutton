@@ -12,8 +12,13 @@
 import logger from '/imports/startup/client/logger';
 
 // TTS endpoint URL (proxied through nginx)
+// Selects the appropriate endpoint based on the configured TTS provider
 const getTTSEndpoint = (): string => {
-  // Use relative URL - nginx will proxy to bbb-graphql-actions
+  const SETTINGS = window.meetingClientSettings;
+  const provider = SETTINGS?.public?.app?.audioCaptions?.tts?.provider || 'azure';
+  if (provider === 'tim-ai') {
+    return '/tim-ai/tts';
+  }
   return '/tts';
 };
 
@@ -275,8 +280,11 @@ export const isTTSPlaying = (): boolean => isPlaying;
  * Checks if TTS service is available
  */
 export const checkTTSAvailability = async (): Promise<boolean> => {
+  const SETTINGS = window.meetingClientSettings;
+  const provider = SETTINGS?.public?.app?.audioCaptions?.tts?.provider || 'azure';
+  const healthPath = provider === 'tim-ai' ? '/tim-ai/tts/health' : '/tts/health';
   try {
-    const response = await fetch('/tts/health');
+    const response = await fetch(healthPath);
     const data = await response.json();
     return data.enabled === true;
   } catch {
