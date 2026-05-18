@@ -1,0 +1,23 @@
+# Tim AI (OmniVoice) STT (Speech-to-Text) WebSocket endpoint proxy
+# Proxies WebSocket connections to bbb-graphql-actions server
+location /tim-ai/stt/ws {
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $host;
+    proxy_connect_timeout 3s;
+    proxy_send_timeout 30s;
+    proxy_read_timeout 7d;
+    proxy_pass http://127.0.0.1:8093/tim-ai/stt/ws;
+}
+
+# Tim AI STT health check endpoint
+location /tim-ai/stt/health {
+    proxy_http_version 1.1;
+    proxy_set_header Connection "";
+    proxy_set_header Host $host;
+    proxy_connect_timeout 3s;
+    proxy_send_timeout 5s;
+    proxy_read_timeout 5s;
+    proxy_pass http://127.0.0.1:8093/tim-ai/stt/health;
+}
