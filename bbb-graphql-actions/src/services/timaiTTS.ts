@@ -38,6 +38,7 @@ export const SUPPORTED_TTS_LANGUAGES: Record<string, string> = {
   'tr-TR': 'tr',
   'ja-JP': 'ja',
   'ar-SA': 'ar',
+  'de-DE': 'de',
 };
 
 export function isTimAITtsEnabled(): boolean {

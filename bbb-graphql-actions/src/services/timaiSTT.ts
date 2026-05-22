@@ -39,6 +39,7 @@ export const SUPPORTED_STT_LANGUAGES: Record<string, string> = {
   'tr-TR': 'tr',
   'ja-JP': 'ja',
   'ar-SA': 'ar',
+  'de-DE': 'de',
 };
 
 export interface STTSessionCallbacks {

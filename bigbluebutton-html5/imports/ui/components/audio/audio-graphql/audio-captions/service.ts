@@ -71,7 +71,7 @@ const TIM_AI_LOCALES = [
   'en-US', 'es-ES', 'ro-RO', 'pl-PL', 'fr-FR', 'ar-SA', 'tr-TR', 'ru-RU',
   'uk-UA', 'it-IT', 'pt-BR', 'nl-NL', 'ja-JP', 'sv-SE', 'fi-FI', 'nb-NO',
   'da-DK', 'cs-CZ', 'hu-HU', 'el-GR', 'bg-BG', 'hr-HR', 'lt-LT', 'lv-LV',
-  'et-EE',
+  'et-EE', 'de-DE',
 ];
 
 export const getSpeechVoices = () => {
