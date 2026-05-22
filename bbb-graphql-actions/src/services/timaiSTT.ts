@@ -17,7 +17,7 @@ export const SUPPORTED_STT_LANGUAGES: Record<string, string> = {
   'en-US': 'en',
   'es-ES': 'es',
   'fr-FR': 'fr',
-  'de-DE': 'de',
+  'lv-LV': 'lv',
   'pt-BR': 'pt',
   'ru-RU': 'ru',
   'it-IT': 'it',
