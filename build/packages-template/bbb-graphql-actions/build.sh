@@ -39,6 +39,12 @@ popd
 mkdir -p staging/usr/lib/systemd/system
 cp bbb-graphql-actions.service staging/usr/lib/systemd/system
 
+mkdir -p staging/usr/share/bigbluebutton/nginx
+cp timai-stt.nginx staging/usr/share/bigbluebutton/nginx/
+cp timai-tts.nginx staging/usr/share/bigbluebutton/nginx/
+cp stt.nginx staging/usr/share/bigbluebutton/nginx/
+cp tts.nginx staging/usr/share/bigbluebutton/nginx/
+
 echo "List files"
 find staging/
 
