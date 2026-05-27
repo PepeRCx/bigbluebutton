@@ -23,17 +23,12 @@ const server = createServer(app);
 // Create and configure Redis client
 const redisClient = createRedisClient();
 
-// Create WebSocket server for STT on path /stt/ws
-const wss = new WebSocketServer({
-  server,
-  path: '/stt/ws',
-});
-
-// Create WebSocket server for Tim AI STT on path /tim-ai/stt/ws
-const timaiWss = new WebSocketServer({
-  server,
-  path: '/tim-ai/stt/ws',
-});
+// Create WebSocket servers in noServer mode so they don't register
+// their own upgrade listeners (which conflict and return 400 for
+// paths that don't match). The manual server.on('upgrade') handler
+// below routes requests to the correct WebSocketServer.
+const wss = new WebSocketServer({ noServer: true });
+const timaiWss = new WebSocketServer({ noServer: true });
 
 // Manual upgrade handler required for Express 5 compatibility.
 // Express 5 no longer delegates upgrade requests automatically,
