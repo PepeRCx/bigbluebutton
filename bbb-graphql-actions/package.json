@@ -7,7 +7,8 @@
   "scripts": {
     "start": "nodemon --watch src --ext ts,json --exec ts-node src/index.ts",
     "build": "tsc",
-    "serve": "node dist/index.js"
+    "serve": "node dist/index.js",
+    "deploy": "tsc && cp dist/index.js /usr/local/bigbluebutton/bbb-graphql-actions/bbb-graphql-actions.js && cp -r dist/actions dist/imports dist/services dist/types dist/websocket /usr/local/bigbluebutton/bbb-graphql-actions/"
   },
   "repository": {
     "type": "git",
