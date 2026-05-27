@@ -35,6 +35,24 @@ const timaiWss = new WebSocketServer({
   path: '/tim-ai/stt/ws',
 });
 
+// Manual upgrade handler required for Express 5 compatibility.
+// Express 5 no longer delegates upgrade requests automatically,
+// instead treating them as normal HTTP requests (which 404/400).
+// We intercept the upgrade event on the raw HTTP server before
+// Express gets a chance to respond.
+server.on('upgrade', (req, socket, head) => {
+  if (req.url?.startsWith('/tim-ai/stt/ws')) {
+    timaiWss.handleUpgrade(req, socket, head, (ws) => {
+      timaiWss.emit('connection', ws, req);
+    });
+  } else if (req.url?.startsWith('/stt/ws')) {
+    wss.handleUpgrade(req, socket, head, (ws) => {
+      wss.emit('connection', ws, req);
+    });
+  }
+  // Other upgrade requests are handled elsewhere or dropped
+});
+
 /**
  * Handles action submissions and publishes them to Redis.
  */
