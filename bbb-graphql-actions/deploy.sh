@@ -4,29 +4,35 @@ cd "$(dirname "$0")"
 
 verify_ws_artifact() {
     local label="$1"
-    local file_path="$2"
+    local entry_file="$2"
+    local handler_file="$3"
 
-    if [[ ! -f "$file_path" ]] ; then
-        echo "ERROR: $label artifact not found at $file_path"
+    if [[ ! -f "$entry_file" ]] ; then
+        echo "ERROR: $label entry artifact not found at $entry_file"
         exit 1
     fi
 
-    if ! grep -Fq "server.on('upgrade'" "$file_path" ; then
+    if [[ ! -f "$handler_file" ]] ; then
+        echo "ERROR: $label Tim AI STT handler artifact not found at $handler_file"
+        exit 1
+    fi
+
+    if ! grep -Fq "server.on('upgrade'" "$entry_file" ; then
         echo "ERROR: $label artifact is missing the Express 5 WebSocket upgrade handler"
         exit 1
     fi
 
-    if ! grep -Fq "/tim-ai/stt/ws" "$file_path" ; then
+    if ! grep -Fq "/tim-ai/stt/ws" "$entry_file" ; then
         echo "ERROR: $label artifact is missing the Tim AI STT WebSocket route"
         exit 1
     fi
 
-    if ! grep -Fq "TimAI-STTHandler" "$file_path" ; then
+    if ! grep -Fq "TimAI-STTHandler" "$handler_file" ; then
         echo "ERROR: $label artifact is missing the Tim AI STT handler wiring"
         exit 1
     fi
 
-    if grep -Fq "path: '/tim-ai/stt/ws'" "$file_path" ; then
+    if grep -Fq "path: '/tim-ai/stt/ws'" "$entry_file" ; then
         echo "ERROR: $label artifact still contains the stale path-based Tim AI STT WebSocket registration"
         exit 1
     fi
@@ -45,7 +51,7 @@ if [ ! -d ./node_modules ] ; then
 fi
 
 sudo npm run build
-verify_ws_artifact "built" "dist/index.js"
+verify_ws_artifact "built" "dist/index.js" "dist/websocket/timaiSttHandler.js"
 
 # handle renaming circa dec 2023
 if [[ -d /usr/local/bigbluebutton/bbb-graphql-actions-adapter-server ]] ; then
@@ -57,7 +63,9 @@ fi
 
 sudo mv -f dist/index.js dist/bbb-graphql-actions.js
 sudo cp -rf dist/* /usr/local/bigbluebutton/bbb-graphql-actions
-verify_ws_artifact "deployed" "/usr/local/bigbluebutton/bbb-graphql-actions/bbb-graphql-actions.js"
+verify_ws_artifact "deployed" \
+    "/usr/local/bigbluebutton/bbb-graphql-actions/bbb-graphql-actions.js" \
+    "/usr/local/bigbluebutton/bbb-graphql-actions/websocket/timaiSttHandler.js"
 sudo systemctl restart bbb-graphql-actions
 echo ''
 echo ''
