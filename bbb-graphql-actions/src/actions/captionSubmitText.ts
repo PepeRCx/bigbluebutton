@@ -1,11 +1,11 @@
 import { RedisMessage, RedisMessageOrArray } from '../types';
 import { throwErrorIfInvalidInput } from "../imports/validation";
-import { translateToAllLanguages, isAzureTranslatorEnabled, getSupportedLocales } from '../services/azureTranslator';
+import { translateToAllLanguages, getSupportedLocales, isTranslationEnabled } from '../services/translationService';
 
 /**
  * Builds Redis message(s) for caption submission.
  *
- * When Azure Translator is enabled and the caption is final (isFinal=true),
+ * When translation is enabled and the caption is final (isFinal=true),
  * this will translate the transcript to all supported languages and return
  * multiple messages - one for the original caption and one for each translation.
  */
@@ -58,7 +58,7 @@ export default async function buildRedisMessage(
   };
 
   // If not final or translation disabled, return only the original message
-  if (!isFinal || !isAzureTranslatorEnabled() || !transcript.trim()) {
+  if (!isFinal || !isTranslationEnabled() || !transcript.trim()) {
     return originalMessage;
   }
 
