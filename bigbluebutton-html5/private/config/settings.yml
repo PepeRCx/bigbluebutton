@@ -163,162 +163,26 @@ public:
         # [en-US, es-ES, pt-BR,...]: to set a specific locale
         # disabled: to set disabled
         locale: disabled
-      # Azure Translator configuration for real-time caption translation
+      # Real-time caption translation configuration.
+      # Keep this provider aligned with bigbluebutton.properties translation.provider.
       translation:
         enabled: true
+        # provider: [azure, tim-ai]
         provider: azure
         defaultEnabled: true
         supportedLanguages:
           - locale: en-US
             name: English
             azureCode: en
-          - locale: es-ES
-            name: Spanish
-            azureCode: es
-          - locale: pt-BR
-            name: Portuguese
-            azureCode: pt
           - locale: de-DE
             name: German
             azureCode: de
+          - locale: es-ES
+            name: Spanish
+            azureCode: es
           - locale: fr-FR
             name: French
             azureCode: fr
-          - locale: ru-RU
-            name: Russian
-            azureCode: ru
-          - locale: it-IT
-            name: Italian
-            azureCode: it
-          - locale: pl-PL
-            name: Polish
-            azureCode: pl
-          - locale: nl-NL
-            name: Dutch
-            azureCode: nl
-          - locale: uk-UA
-            name: Ukrainian
-            azureCode: uk
-          - locale: ro-RO
-            name: Romanian
-            azureCode: ro
-          - locale: el-GR
-            name: Greek
-            azureCode: el
-          - locale: cs-CZ
-            name: Czech
-            azureCode: cs
-          - locale: hu-HU
-            name: Hungarian
-            azureCode: hu
-          - locale: sv-SE
-            name: Swedish
-            azureCode: sv
-          - locale: da-DK
-            name: Danish
-            azureCode: da
-          - locale: nb-NO
-            name: Norwegian
-            azureCode: nb
-          - locale: fi-FI
-            name: Finnish
-            azureCode: fi
-          - locale: bg-BG
-            name: Bulgarian
-            azureCode: bg
-          - locale: sr-RS
-            name: Serbian
-            azureCode: sr
-          - locale: hr-HR
-            name: Croatian
-            azureCode: hr
-          - locale: sk-SK
-            name: Slovak
-            azureCode: sk
-          - locale: lt-LT
-            name: Lithuanian
-            azureCode: lt
-          - locale: lv-LV
-            name: Latvian
-            azureCode: lv
-          - locale: et-EE
-            name: Estonian
-            azureCode: et
-          - locale: sl-SI
-            name: Slovenian
-            azureCode: sl
-          - locale: is-IS
-            name: Icelandic
-            azureCode: is
-          - locale: zh-CN
-            name: Chinese (Simplified)
-            azureCode: zh-Hans
-          - locale: hi-IN
-            name: Hindi
-            azureCode: hi
-          - locale: ar-SA
-            name: Arabic
-            azureCode: ar
-          - locale: ja-JP
-            name: Japanese
-            azureCode: ja
-          - locale: bn-IN
-            name: Bengali
-            azureCode: bn
-          - locale: ur-PK
-            name: Urdu
-            azureCode: ur
-          - locale: id-ID
-            name: Indonesian
-            azureCode: id
-          - locale: sw-KE
-            name: Swahili
-            azureCode: sw
-          - locale: mr-IN
-            name: Marathi
-            azureCode: mr
-          - locale: te-IN
-            name: Telugu
-            azureCode: te
-          - locale: tr-TR
-            name: Turkish
-            azureCode: tr
-          - locale: ko-KR
-            name: Korean
-            azureCode: ko
-          - locale: ta-IN
-            name: Tamil
-            azureCode: ta
-          - locale: vi-VN
-            name: Vietnamese
-            azureCode: vi
-          - locale: th-TH
-            name: Thai
-            azureCode: th
-          - locale: fa-IR
-            name: Persian
-            azureCode: fa
-          - locale: fil-PH
-            name: Filipino
-            azureCode: fil
-          - locale: ms-MY
-            name: Malay
-            azureCode: ms
-          - locale: he-IL
-            name: Hebrew
-            azureCode: he
-          - locale: ka-GE
-            name: Georgian
-            azureCode: ka
-          - locale: hy-AM
-            name: Armenian
-            azureCode: hy
-          - locale: az-AZ
-            name: Azerbaijani
-            azureCode: az
-          - locale: kk-KZ
-            name: Kazakh
-            azureCode: kk
       # TTS (Text-to-Speech) configuration for voice translation
       # provider: [azure, tim-ai] - which TTS backend to use
       tts:
