@@ -15,7 +15,7 @@ import {
   isLocaleSupported,
   STTSession,
 } from '../services/azureSpeechToText';
-import { translateToAllLanguages, isAzureTranslatorEnabled, getSupportedLocales } from '../services/azureTranslator';
+import { translateToAllLanguages, getSupportedLocales, isTranslationEnabled } from '../services/translationService';
 
 interface STTConnection {
   ws: WebSocket;
@@ -92,7 +92,7 @@ async function publishTranslations(
   transcript: string,
   sourceLocale: string
 ): Promise<void> {
-  if (!isAzureTranslatorEnabled() || !transcript.trim()) {
+  if (!isTranslationEnabled() || !transcript.trim()) {
     return;
   }
 
