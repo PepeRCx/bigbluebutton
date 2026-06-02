@@ -4,7 +4,7 @@
  * Accepts raw Int16 PCM audio streams from browser clients,
  * batches them, sends to the OmniVoice HTTP STT endpoint,
  * and publishes transcripts to Redis for the BBB caption pipeline.
- * Reuses Azure Translator for real-time caption translation.
+ * Uses the configured translation backend for real-time caption translation.
  */
 
 import { WebSocket, WebSocketServer } from 'ws';
@@ -17,7 +17,7 @@ import {
   isLocaleSupported,
   STTSession,
 } from '../services/timaiSTT';
-import { translateToAllLanguages, isAzureTranslatorEnabled, getSupportedLocales } from '../services/azureTranslator';
+import { translateToAllLanguages, getSupportedLocales, isTranslationEnabled } from '../services/translationService';
 
 interface STTConnection {
   ws: WebSocket;
@@ -84,7 +84,7 @@ async function publishTranslations(
   transcript: string,
   sourceLocale: string
 ): Promise<void> {
-  if (!isAzureTranslatorEnabled() || !transcript.trim()) {
+  if (!isTranslationEnabled() || !transcript.trim()) {
     return;
   }
 
