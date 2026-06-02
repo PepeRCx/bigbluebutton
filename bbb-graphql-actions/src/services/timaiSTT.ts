@@ -10,37 +10,11 @@
  */
 
 import { TIMAI_STT_ENABLED, TIMAI_STT_URL } from '../config';
+import { BBB_TO_TIMAI_LANGUAGE } from './timaiLocales';
 
 const STT_HTTP_URL = TIMAI_STT_URL.replace(/^ws/, 'http').replace(/\/stt-stream$/, '/stt');
 
-export const SUPPORTED_STT_LANGUAGES: Record<string, string> = {
-  'en-US': 'en',
-  'es-ES': 'es',
-  'fr-FR': 'fr',
-  'lv-LV': 'lv',
-  'pt-BR': 'pt',
-  'ru-RU': 'ru',
-  'it-IT': 'it',
-  'pl-PL': 'pl',
-  'nl-NL': 'nl',
-  'uk-UA': 'uk',
-  'ro-RO': 'ro',
-  'el-GR': 'el',
-  'cs-CZ': 'cs',
-  'hu-HU': 'hu',
-  'sv-SE': 'sv',
-  'da-DK': 'da',
-  'nb-NO': 'no',
-  'fi-FI': 'fi',
-  'bg-BG': 'bg',
-  'hr-HR': 'hr',
-  'lt-LT': 'lt',
-  'et-EE': 'et',
-  'tr-TR': 'tr',
-  'ja-JP': 'ja',
-  'ar-SA': 'ar',
-  'de-DE': 'de',
-};
+export const SUPPORTED_STT_LANGUAGES: Record<string, string> = BBB_TO_TIMAI_LANGUAGE;
 
 export interface STTSessionCallbacks {
   onRecognized: (text: string, resultId: string) => void;
