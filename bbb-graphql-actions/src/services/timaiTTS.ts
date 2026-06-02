@@ -9,37 +9,9 @@
  */
 
 import { TIMAI_TTS_ENABLED, TIMAI_TTS_URL } from '../config';
+import { BBB_TO_TIMAI_LANGUAGE } from './timaiLocales';
 
-// Supported language mappings: BBB locale code → OmniVoice language code
-// Only languages overlapping between BBB's available list and OmniVoice's supported set.
-export const SUPPORTED_TTS_LANGUAGES: Record<string, string> = {
-  'en-US': 'en',
-  'es-ES': 'es',
-  'fr-FR': 'fr',
-  'lv-LV': 'lv',
-  'pt-BR': 'pt',
-  'ru-RU': 'ru',
-  'it-IT': 'it',
-  'pl-PL': 'pl',
-  'nl-NL': 'nl',
-  'uk-UA': 'uk',
-  'ro-RO': 'ro',
-  'el-GR': 'el',
-  'cs-CZ': 'cs',
-  'hu-HU': 'hu',
-  'sv-SE': 'sv',
-  'da-DK': 'da',
-  'nb-NO': 'no',
-  'fi-FI': 'fi',
-  'bg-BG': 'bg',
-  'hr-HR': 'hr',
-  'lt-LT': 'lt',
-  'et-EE': 'et',
-  'tr-TR': 'tr',
-  'ja-JP': 'ja',
-  'ar-SA': 'ar',
-  'de-DE': 'de',
-};
+export const SUPPORTED_TTS_LANGUAGES: Record<string, string> = BBB_TO_TIMAI_LANGUAGE;
 
 export function isTimAITtsEnabled(): boolean {
   return TIMAI_TTS_ENABLED && !!TIMAI_TTS_URL;
