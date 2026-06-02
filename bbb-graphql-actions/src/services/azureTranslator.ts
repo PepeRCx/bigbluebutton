@@ -124,7 +124,7 @@ interface AzureTranslationResult {
   translations: AzureTranslation[];
 }
 
-interface TranslationResult {
+export interface TranslationResult {
   locale: string;
   text: string;
 }
