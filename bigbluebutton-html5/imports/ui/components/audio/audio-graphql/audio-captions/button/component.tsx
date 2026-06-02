@@ -130,17 +130,19 @@ const AudioCaptionsButton: React.FC<AudioCaptionsButtonProps> = ({
 
   // Build "Show captions in" language options
   const getCaptionLanguageOptions = (): (MenuOptionItemType | MenuSeparatorItemType)[] => {
-    return getTranslationLanguages().map((lang) => ({
-      icon: '',
-      label: lang.name,
-      key: `caption-${lang.locale}`,
-      iconRight: selectedCaptionLocale.current === lang.locale ? 'check' : null,
-      customStyles: (selectedCaptionLocale.current === lang.locale) && Styled.SelectedLabel,
-      onClick: () => {
-        selectedCaptionLocale.current = lang.locale;
-        setUserLocaleProperty(lang.locale, setUserCaptionLocale);
-      },
-    }));
+    return getTranslationLanguages()
+      .filter((lang) => allowedCaptionLocales.includes(lang.locale))
+      .map((lang) => ({
+        icon: '',
+        label: lang.name,
+        key: `caption-${lang.locale}`,
+        iconRight: selectedCaptionLocale.current === lang.locale ? 'check' : null,
+        customStyles: (selectedCaptionLocale.current === lang.locale) && Styled.SelectedLabel,
+        onClick: () => {
+          selectedCaptionLocale.current = lang.locale;
+          setUserLocaleProperty(lang.locale, setUserCaptionLocale);
+        },
+      }));
   };
 
   const autoLanguage = AudioCaptionsService.isGladia() ? {
