@@ -23,6 +23,9 @@ import { TRANSCRIPTION_LOCALE } from '/imports/ui/components/audio/audio-graphql
 const getTranslationLanguages = () => window.meetingClientSettings?.public?.app?.audioCaptions
   ?.translation?.supportedLanguages || [];
 
+const getAllowedCaptionLocales = () => window.meetingClientSettings?.public?.app?.audioCaptions
+  ?.language?.available || [];
+
 const messages: { [key: string]: { id: string; description?: string } } = {
   start: {
     id: 'app.audio.captions.button.start',
@@ -87,6 +90,9 @@ const AudioCaptionsButton: React.FC<AudioCaptionsButtonProps> = ({
 }) => {
   const knownLocales = window.meetingClientSettings.public.captions.locales;
   const PROVIDER = window.meetingClientSettings.public.app.audioCaptions.provider;
+  const allowedCaptionLocales = getAllowedCaptionLocales();
+  const filteredAvailableVoices = availableVoices
+    .filter((voice) => voice !== 'auto' && voice !== '' && allowedCaptionLocales.includes(voice));
 
   const intl = useIntl();
   const [active] = useAudioCaptionEnable();
@@ -102,11 +108,12 @@ const AudioCaptionsButton: React.FC<AudioCaptionsButtonProps> = ({
   };
 
   const isCaptionLocaleSet = () => currentCaptionLocale === DISABLED;
-  const fallbackLocale = availableVoices.includes(navigator.language)
+  const fallbackLocale = filteredAvailableVoices.includes(navigator.language)
     ? navigator.language
-    : 'en-US';
+    : filteredAvailableVoices[0] || allowedCaptionLocales[0] || 'en-US';
+  const isCurrentCaptionLocaleAllowed = allowedCaptionLocales.includes(currentCaptionLocale);
 
-  const getSelectedLocaleValue = isCaptionLocaleSet()
+  const getSelectedLocaleValue = (isCaptionLocaleSet() || !isCurrentCaptionLocaleAllowed)
     ? fallbackLocale
     : currentCaptionLocale;
 
@@ -117,7 +124,7 @@ const AudioCaptionsButton: React.FC<AudioCaptionsButtonProps> = ({
   }, [currentCaptionLocale]);
 
   const shouldRenderChevron = isSupported;
-  const shouldRenderSelector = isSupported && availableVoices.length > 0;
+  const shouldRenderSelector = isSupported && filteredAvailableVoices.length > 0;
 
   const isAudioTranscriptionEnabled = AudioCaptionsService.useIsAudioTranscriptionEnabled();
 
@@ -152,10 +159,9 @@ const AudioCaptionsButton: React.FC<AudioCaptionsButtonProps> = ({
 
   const getAvailableLocales = () => {
     let indexToInsertSeparator = -1;
-    const availableVoicesObjectToMenu: (MenuOptionItemType | MenuSeparatorItemType)[] = availableVoices
-      .filter((availableVoice) => availableVoice !== 'auto' && availableVoice !== '')
+    const availableVoicesObjectToMenu: (MenuOptionItemType | MenuSeparatorItemType)[] = filteredAvailableVoices
       .map((availableVoice: string, index: number) => {
-        if (availableVoice === availableVoices[0]) {
+        if (availableVoice === filteredAvailableVoices[0]) {
           indexToInsertSeparator = index;
         }
 
@@ -171,7 +177,7 @@ const AudioCaptionsButton: React.FC<AudioCaptionsButtonProps> = ({
             iconRight: selectedCaptionLocale.current === availableVoice ? 'check' : null,
             customStyles: (selectedCaptionLocale.current === availableVoice) && Styled.SelectedLabel,
             disabled: !isAudioTranscriptionEnabled,
-            dividerTop: !AudioCaptionsService.isGladia() && availableVoice === availableVoices[0],
+            dividerTop: !AudioCaptionsService.isGladia() && availableVoice === filteredAvailableVoices[0],
             onClick: () => {
               selectedCaptionLocale.current = availableVoice;
               setUserLocaleProperty(selectedCaptionLocale.current, setUserCaptionLocale);
@@ -191,7 +197,7 @@ const AudioCaptionsButton: React.FC<AudioCaptionsButtonProps> = ({
   };
 
   const getAvailableCaptions = () => {
-    return availableVoices.map((caption) => {
+    return filteredAvailableVoices.map((caption) => {
       const localeName = knownLocales ? knownLocales.find((l) => l.locale === caption)?.name : 'en';
 
       return localeName !== '' ? {
@@ -249,7 +255,7 @@ const AudioCaptionsButton: React.FC<AudioCaptionsButtonProps> = ({
   const onToggleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!currentCaptionLocale && !active) {
-      setUserCaptionLocale(availableVoices[0] || 'en-US', PROVIDER);
+      setUserCaptionLocale(filteredAvailableVoices[0] || fallbackLocale, PROVIDER);
     }
     setAudioCaptions(!active);
   };
