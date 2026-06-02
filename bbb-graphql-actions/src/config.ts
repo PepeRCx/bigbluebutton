@@ -32,6 +32,18 @@ const loadProperties = () => {
 
 const bbbProperties = loadProperties();
 
+const normalizeTranslationProvider = (value: string | undefined): 'azure' | 'tim-ai' => {
+    if (value === 'tim-ai') {
+        return 'tim-ai';
+    }
+
+    if (value && value !== 'azure') {
+        console.warn(`[Config] Unsupported translation provider "${value}". Falling back to azure.`);
+    }
+
+    return 'azure';
+};
+
 if (Object.keys(bbbProperties).length > 0) {
     console.info(`[Config] Loaded ${Object.keys(bbbProperties).length} properties from ${PROPERTIES_FILE}`);
 } else {
@@ -50,10 +62,20 @@ export const AZURE_TRANSLATOR_KEY = process.env.AZURE_TRANSLATOR_KEY
     || bbbProperties['azure.translator.key']
     || '';
 
+export const TRANSLATION_PROVIDER = normalizeTranslationProvider(
+    process.env.TRANSLATION_PROVIDER
+    || bbbProperties['translation.provider']
+    || 'azure'
+);
+
+console.info(`[Config] Translation provider: ${TRANSLATION_PROVIDER}`);
+
 if (AZURE_TRANSLATOR_ENABLED) {
     console.info('[Config] Azure Translator enabled.');
-    if (!AZURE_TRANSLATOR_ENDPOINT) console.warn('[Config] Azure Translator endpoint is missing.');
-    if (!AZURE_TRANSLATOR_KEY) console.warn('[Config] Azure Translator key is missing.');
+    if (TRANSLATION_PROVIDER === 'azure') {
+        if (!AZURE_TRANSLATOR_ENDPOINT) console.warn('[Config] Azure Translator endpoint is missing.');
+        if (!AZURE_TRANSLATOR_KEY) console.warn('[Config] Azure Translator key is missing.');
+    }
 } else {
     console.info('[Config] Azure Translator is disabled.');
 }
@@ -126,4 +148,21 @@ if (TIMAI_STT_ENABLED) {
     console.info(`[Config] Tim AI STT URL: ${TIMAI_STT_URL}`);
 } else {
     console.info('[Config] Tim AI STT is disabled.');
+}
+
+// Tim AI (OmniVoice) Translation Configuration
+export const TIMAI_TRANSLATE_ENABLED = process.env.TIMAI_TRANSLATE_ENABLED !== 'false'
+    && (bbbProperties['timai.translate.enabled'] !== 'false');
+
+export const TIMAI_TRANSLATE_URL = process.env.TIMAI_TRANSLATE_URL
+    || bbbProperties['timai.translate.url']
+    || 'ws://localhost:8000/api/v1/translate-stream';
+
+if (TIMAI_TRANSLATE_ENABLED) {
+    console.info('[Config] Tim AI translation enabled.');
+    if (TRANSLATION_PROVIDER === 'tim-ai') {
+        console.info(`[Config] Tim AI translation URL: ${TIMAI_TRANSLATE_URL}`);
+    }
+} else {
+    console.info('[Config] Tim AI translation is disabled.');
 }
