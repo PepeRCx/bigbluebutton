@@ -19,7 +19,7 @@ import { GET_CAPTIONS, getCaptions } from '../live/queries';
 import {
   speakText,
   stopTTSAudio,
-  setOriginalSpeakerVolumeValue,
+  updateOriginalSpeakerVolume,
   setTTSVolumeValue,
   restoreOriginalSpeakerVolume,
 } from './service';
@@ -98,7 +98,7 @@ const TTSController: React.FC = () => {
   useEffect(() => {
     if (voiceTranslationEnabled && audioCaptionsEnabled) {
       // TTS enabled - apply volume settings
-      setOriginalSpeakerVolumeValue(originalSpeakerVolume);
+      updateOriginalSpeakerVolume(originalSpeakerVolume);
       setTTSVolumeValue(ttsVolume);
       logger.info({ logCode: 'tts_enabled' }, 'Voice Translation enabled');
     } else {
@@ -125,7 +125,7 @@ const TTSController: React.FC = () => {
 
   useEffect(() => {
     if (voiceTranslationEnabled && audioCaptionsEnabled) {
-      setOriginalSpeakerVolumeValue(originalSpeakerVolume);
+      updateOriginalSpeakerVolume(originalSpeakerVolume);
     }
   }, [originalSpeakerVolume, voiceTranslationEnabled, audioCaptionsEnabled]);
 

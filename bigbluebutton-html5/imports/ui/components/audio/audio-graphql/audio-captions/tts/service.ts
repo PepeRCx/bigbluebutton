@@ -37,6 +37,8 @@ let isPlaying = false;
 // Volume control state
 let ttsGainNode: GainNode | null = null;
 let currentTTSVolume: number = 1;
+// Cache the user's preferred speaker level while voice translation is active.
+// Temporary restores to 100% must not overwrite this preference.
 let currentOriginalSpeakerVolume: number = 1;
 
 /**
