@@ -44,6 +44,40 @@ const normalizeTranslationProvider = (value: string | undefined): 'azure' | 'tim
     return 'azure';
 };
 
+const parseNumberConfig = (
+    name: string,
+    rawValue: string | undefined,
+    defaultValue: number,
+    options: {
+        integer?: boolean;
+        min?: number;
+    } = {},
+): number => {
+    if (rawValue === undefined || rawValue === '') {
+        return defaultValue;
+    }
+
+    const parsedValue = Number(rawValue);
+    const { integer = false, min } = options;
+
+    if (!Number.isFinite(parsedValue)) {
+        console.warn(`[Config] Invalid numeric value for ${name}: "${rawValue}". Falling back to ${defaultValue}.`);
+        return defaultValue;
+    }
+
+    if (integer && !Number.isInteger(parsedValue)) {
+        console.warn(`[Config] Expected integer value for ${name}: "${rawValue}". Falling back to ${defaultValue}.`);
+        return defaultValue;
+    }
+
+    if (min !== undefined && parsedValue < min) {
+        console.warn(`[Config] Value for ${name} must be >= ${min}. Falling back to ${defaultValue}.`);
+        return defaultValue;
+    }
+
+    return parsedValue;
+};
+
 if (Object.keys(bbbProperties).length > 0) {
     console.info(`[Config] Loaded ${Object.keys(bbbProperties).length} properties from ${PROPERTIES_FILE}`);
 } else {
@@ -143,9 +177,52 @@ export const TIMAI_STT_URL = process.env.TIMAI_STT_URL
     || bbbProperties['timai.stt.url']
     || 'ws://localhost:8000/api/v1/stt-stream';
 
+export const TIMAI_STT_ENERGY_THRESHOLD = parseNumberConfig(
+    'timai.stt.energyThreshold',
+    process.env.TIMAI_STT_ENERGY_THRESHOLD || bbbProperties['timai.stt.energyThreshold'],
+    0.01,
+    { min: 0 },
+);
+
+export const TIMAI_STT_MIN_CHUNK_MS = parseNumberConfig(
+    'timai.stt.minChunkMs',
+    process.env.TIMAI_STT_MIN_CHUNK_MS || bbbProperties['timai.stt.minChunkMs'],
+    500,
+    { integer: true, min: 0 },
+);
+
+export const TIMAI_STT_MIN_VOICED_MS = parseNumberConfig(
+    'timai.stt.minVoicedMs',
+    process.env.TIMAI_STT_MIN_VOICED_MS || bbbProperties['timai.stt.minVoicedMs'],
+    400,
+    { integer: true, min: 0 },
+);
+
+export const TIMAI_STT_DUPLICATE_WINDOW_MS = parseNumberConfig(
+    'timai.stt.duplicateWindowMs',
+    process.env.TIMAI_STT_DUPLICATE_WINDOW_MS || bbbProperties['timai.stt.duplicateWindowMs'],
+    6000,
+    { integer: true, min: 0 },
+);
+
+export const TIMAI_STT_DUPLICATE_MAX_WORDS = parseNumberConfig(
+    'timai.stt.duplicateMaxWords',
+    process.env.TIMAI_STT_DUPLICATE_MAX_WORDS || bbbProperties['timai.stt.duplicateMaxWords'],
+    4,
+    { integer: true, min: 0 },
+);
+
 if (TIMAI_STT_ENABLED) {
     console.info('[Config] Tim AI STT enabled.');
     console.info(`[Config] Tim AI STT URL: ${TIMAI_STT_URL}`);
+    console.info(
+        `[Config] Tim AI STT gating: energyThreshold=${TIMAI_STT_ENERGY_THRESHOLD}, `
+        + `minChunkMs=${TIMAI_STT_MIN_CHUNK_MS}, minVoicedMs=${TIMAI_STT_MIN_VOICED_MS}`,
+    );
+    console.info(
+        `[Config] Tim AI STT duplicate suppression: duplicateWindowMs=${TIMAI_STT_DUPLICATE_WINDOW_MS}, `
+        + `duplicateMaxWords=${TIMAI_STT_DUPLICATE_MAX_WORDS}`,
+    );
 } else {
     console.info('[Config] Tim AI STT is disabled.');
 }
