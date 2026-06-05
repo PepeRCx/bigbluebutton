@@ -9,10 +9,17 @@
  * API reference: voice-api-README.md
  */
 
-import { TIMAI_STT_ENABLED, TIMAI_STT_URL } from '../config';
+import {
+  TIMAI_STT_ENABLED,
+  TIMAI_STT_ENERGY_THRESHOLD,
+  TIMAI_STT_MIN_CHUNK_MS,
+  TIMAI_STT_MIN_VOICED_MS,
+  TIMAI_STT_URL,
+} from '../config';
 import { BBB_TO_TIMAI_LANGUAGE } from './timaiLocales';
 
 const STT_HTTP_URL = TIMAI_STT_URL.replace(/^ws/, 'http').replace(/\/stt-stream$/, '/stt');
+const FRAME_DURATION_MS = 20;
 
 export const SUPPORTED_STT_LANGUAGES: Record<string, string> = BBB_TO_TIMAI_LANGUAGE;
 
@@ -43,6 +50,17 @@ export function isLocaleSupported(locale: string): boolean {
 
 export function getTimAILanguageCode(locale: string): string | null {
   return SUPPORTED_STT_LANGUAGES[locale] || null;
+}
+
+interface AudioGateMetrics {
+  chunkRms: number;
+  totalDurationMs: number;
+  voicedDurationMs: number;
+}
+
+interface AudioGateResult extends AudioGateMetrics {
+  passed: boolean;
+  reason?: string;
 }
 
 function int16ToWav(samples: Int16Array, sampleRate: number): Buffer {
@@ -96,6 +114,82 @@ function buildMultipartFormData(wavBuffer: Buffer, language: string): { body: Bu
   return { body: Buffer.concat(parts), boundary };
 }
 
+function roundMetric(value: number): string {
+  return value.toFixed(3);
+}
+
+function analyzeAudioChunk(samples: Int16Array, sampleRate: number): AudioGateResult {
+  const totalDurationMs = (samples.length / sampleRate) * 1000;
+
+  if (samples.length === 0) {
+    return {
+      passed: false,
+      reason: 'empty',
+      totalDurationMs,
+      voicedDurationMs: 0,
+      chunkRms: 0,
+    };
+  }
+
+  let sumSquares = 0;
+  for (let i = 0; i < samples.length; i += 1) {
+    const normalizedSample = samples[i] / 32768;
+    sumSquares += normalizedSample * normalizedSample;
+  }
+
+  const chunkRms = Math.sqrt(sumSquares / samples.length);
+  if (totalDurationMs < TIMAI_STT_MIN_CHUNK_MS) {
+    return {
+      passed: false,
+      reason: 'short_chunk',
+      totalDurationMs,
+      voicedDurationMs: 0,
+      chunkRms,
+    };
+  }
+
+  const frameSize = Math.max(1, Math.floor((sampleRate * FRAME_DURATION_MS) / 1000));
+  let voicedFrames = 0;
+
+  for (let offset = 0; offset < samples.length; offset += frameSize) {
+    const frameEnd = Math.min(offset + frameSize, samples.length);
+    const frameLength = frameEnd - offset;
+
+    if (frameLength <= 0) {
+      continue;
+    }
+
+    let frameSumSquares = 0;
+    for (let i = offset; i < frameEnd; i += 1) {
+      const normalizedSample = samples[i] / 32768;
+      frameSumSquares += normalizedSample * normalizedSample;
+    }
+
+    const frameRms = Math.sqrt(frameSumSquares / frameLength);
+    if (frameRms > TIMAI_STT_ENERGY_THRESHOLD) {
+      voicedFrames += 1;
+    }
+  }
+
+  const voicedDurationMs = voicedFrames * FRAME_DURATION_MS;
+  if (voicedDurationMs < TIMAI_STT_MIN_VOICED_MS) {
+    return {
+      passed: false,
+      reason: 'low_voiced_duration',
+      totalDurationMs,
+      voicedDurationMs,
+      chunkRms,
+    };
+  }
+
+  return {
+    passed: true,
+    totalDurationMs,
+    voicedDurationMs,
+    chunkRms,
+  };
+}
+
 export function createSTTSession(
   locale: string,
   callbacks: STTSessionCallbacks
@@ -135,6 +229,20 @@ export function createSTTSession(
     audioBuffer = new Int16Array(0);
 
     try {
+      const gateResult = analyzeAudioChunk(samples, SAMPLE_RATE);
+      if (!gateResult.passed) {
+        console.info(
+          `[TimAI-STT] Skipping chunk: reason=${gateResult.reason} totalMs=${Math.round(gateResult.totalDurationMs)} `
+          + `voicedMs=${Math.round(gateResult.voicedDurationMs)} chunkRms=${roundMetric(gateResult.chunkRms)}`,
+        );
+        return;
+      }
+
+      console.debug(
+        `[TimAI-STT] Sending chunk: totalMs=${Math.round(gateResult.totalDurationMs)} `
+        + `voicedMs=${Math.round(gateResult.voicedDurationMs)} chunkRms=${roundMetric(gateResult.chunkRms)}`,
+      );
+
       const wavBuffer = int16ToWav(samples, SAMPLE_RATE);
       const { body, boundary } = buildMultipartFormData(wavBuffer, lang);
 
@@ -149,6 +257,7 @@ export function createSTTSession(
       if (!response.ok) {
         const errorBody = await response.text();
         console.error(`[TimAI-STT] API error ${response.status}: ${errorBody}`);
+        callbacks.onError(`API error ${response.status}`);
         return;
       }
 
@@ -163,6 +272,7 @@ export function createSTTSession(
       }
     } catch (error) {
       console.error('[TimAI-STT] Transcription request failed:', error);
+      callbacks.onError(error instanceof Error ? error.message : 'Transcription request failed');
     } finally {
       isProcessing = false;
     }
