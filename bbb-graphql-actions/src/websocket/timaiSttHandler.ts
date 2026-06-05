@@ -12,12 +12,18 @@ import { IncomingMessage } from 'http';
 import { URL } from 'url';
 import { RedisClientType } from 'redis';
 import {
+  TIMAI_STT_DUPLICATE_MAX_WORDS,
+  TIMAI_STT_DUPLICATE_WINDOW_MS,
+} from '../config';
+import {
   createSTTSession,
   isTimAISttEnabled,
   isLocaleSupported,
   STTSession,
 } from '../services/timaiSTT';
 import { translateToAllLanguages, getSupportedLocales, isTranslationEnabled } from '../services/translationService';
+
+const DUPLICATE_MAX_CHARS = 32;
 
 interface STTConnection {
   ws: WebSocket;
@@ -27,12 +33,44 @@ interface STTConnection {
   senderUserId: string;
   locale: string;
   currentTranscriptId: string;
+  lastPublishedTranscriptNormalized: string;
+  lastPublishedTranscriptAt: number;
 }
 
 const connections = new Map<WebSocket, STTConnection>();
 
 function generateTranscriptId(userId: string): string {
   return `${userId}-${Date.now()}`;
+}
+
+function normalizeTranscript(transcript: string): string {
+  return transcript.trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+function getWordCount(transcript: string): number {
+  return transcript ? transcript.split(' ').length : 0;
+}
+
+function shouldSuppressDuplicate(connection: STTConnection, transcript: string): boolean {
+  const normalizedTranscript = normalizeTranscript(transcript);
+  if (!normalizedTranscript) {
+    return false;
+  }
+
+  const wordCount = getWordCount(normalizedTranscript);
+  const isShortPhrase = wordCount <= TIMAI_STT_DUPLICATE_MAX_WORDS
+    || normalizedTranscript.length <= DUPLICATE_MAX_CHARS;
+
+  if (!isShortPhrase) {
+    return false;
+  }
+
+  const withinWindow = (Date.now() - connection.lastPublishedTranscriptAt) <= TIMAI_STT_DUPLICATE_WINDOW_MS;
+  if (!withinWindow) {
+    return false;
+  }
+
+  return normalizedTranscript === connection.lastPublishedTranscriptNormalized;
 }
 
 async function publishTranscript(
@@ -152,17 +190,31 @@ function handleConnection(
     senderUserId,
     locale,
     currentTranscriptId: generateTranscriptId(senderUserId),
+    lastPublishedTranscriptNormalized: '',
+    lastPublishedTranscriptAt: 0,
   };
 
   connections.set(ws, connection);
 
   const session = createSTTSession(locale, {
     onRecognized: async (text, resultId) => {
+      const normalizedTranscript = normalizeTranscript(text);
+      const transcriptId = connection.currentTranscriptId;
+
+      if (shouldSuppressDuplicate(connection, text)) {
+        console.info(
+          `[TimAI-STTHandler] Suppressed duplicate transcript for senderUserId=${senderUserId} `
+          + `locale=${locale} text="${normalizedTranscript}"`,
+        );
+        connection.currentTranscriptId = generateTranscriptId(senderUserId);
+        return;
+      }
+
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({
           type: 'final',
           text,
-          transcriptId: connection.currentTranscriptId,
+          transcriptId,
           locale,
         }));
       }
@@ -172,7 +224,7 @@ function handleConnection(
           redisClient,
           meetingId,
           moderatorUserId,
-          connection.currentTranscriptId,
+          transcriptId,
           text,
           locale,
           true
@@ -182,10 +234,13 @@ function handleConnection(
           redisClient,
           meetingId,
           moderatorUserId,
-          connection.currentTranscriptId,
+          transcriptId,
           text,
           locale
         );
+
+        connection.lastPublishedTranscriptNormalized = normalizedTranscript;
+        connection.lastPublishedTranscriptAt = Date.now();
       } catch (error) {
         console.error('[TimAI-STTHandler] Failed to publish transcript:', error);
       }
