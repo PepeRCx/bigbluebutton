@@ -18,6 +18,7 @@ import useCurrentUser from '/imports/ui/core/hooks/useCurrentUser';
 import { GET_CAPTIONS, getCaptions } from '../live/queries';
 import {
   speakText,
+  clearTTSQueue,
   stopTTSAudio,
   updateOriginalSpeakerVolume,
   setTTSVolumeValue,
@@ -41,8 +42,9 @@ const TTSController: React.FC = () => {
   const currentUserId = currentUser?.odUserId ?? '';
   const captionLocale = currentUser?.captionLocale ?? 'en-US';
 
-  // Track last spoken caption to avoid repeating
-  const lastSpokenCaptionId = useRef<string>('');
+  const processedCaptionIdsRef = useRef<Set<string>>(new Set());
+  const skipCurrentSnapshotRef = useRef<boolean>(true);
+  const previousCaptionLocaleRef = useRef<string>(captionLocale);
 
   // Subscribe to captions when TTS is enabled
   const shouldSubscribe = voiceTranslationEnabled && audioCaptionsEnabled && !!captionLocale;
@@ -67,31 +69,38 @@ const TTSController: React.FC = () => {
       return;
     }
 
-    // Get the most recent caption
-    const latestCaption = captionsData.caption[captionsData.caption.length - 1];
-
-    if (!latestCaption || !latestCaption.captionText) {
+    if (skipCurrentSnapshotRef.current) {
+      captionsData.caption.forEach((caption) => {
+        if (caption?.captionId) {
+          processedCaptionIdsRef.current.add(caption.captionId);
+        }
+      });
+      skipCurrentSnapshotRef.current = false;
       return;
     }
 
-    // Check if this caption was already spoken
-    if (latestCaption.captionId === lastSpokenCaptionId.current) {
-      return;
-    }
+    captionsData.caption.forEach((caption) => {
+      if (!caption?.captionId || !caption.captionText) {
+        return;
+      }
 
-    // Speak the caption
-    lastSpokenCaptionId.current = latestCaption.captionId;
+      if (processedCaptionIdsRef.current.has(caption.captionId)) {
+        return;
+      }
 
-    logger.debug({
-      logCode: 'tts_caption_received',
-      extraInfo: {
-        captionId: latestCaption.captionId,
-        text: latestCaption.captionText.substring(0, 30),
-        locale: captionLocale,
-      },
-    }, 'TTS received new caption');
+      processedCaptionIdsRef.current.add(caption.captionId);
 
-    speakText(latestCaption.captionText, captionLocale);
+      logger.debug({
+        logCode: 'tts_caption_received',
+        extraInfo: {
+          captionId: caption.captionId,
+          text: caption.captionText.substring(0, 30),
+          locale: captionLocale,
+        },
+      }, 'TTS received new caption');
+
+      void speakText(caption.captionText, captionLocale);
+    });
   }, [captionsData, voiceTranslationEnabled, audioCaptionsEnabled, captionLocale]);
 
   // Handle TTS enable/disable state changes
@@ -100,21 +109,49 @@ const TTSController: React.FC = () => {
       // TTS enabled - apply volume settings
       updateOriginalSpeakerVolume(originalSpeakerVolume);
       setTTSVolumeValue(ttsVolume);
+      skipCurrentSnapshotRef.current = true;
       logger.info({ logCode: 'tts_enabled' }, 'Voice Translation enabled');
     } else {
       // TTS disabled - stop any playing audio and restore original speaker volume
+      clearTTSQueue();
       stopTTSAudio();
       restoreOriginalSpeakerVolume();
-      lastSpokenCaptionId.current = '';
+      processedCaptionIdsRef.current.clear();
+      skipCurrentSnapshotRef.current = true;
       logger.info({ logCode: 'tts_disabled' }, 'Voice Translation disabled');
     }
 
     // Cleanup on unmount
     return () => {
+      clearTTSQueue();
       stopTTSAudio();
       restoreOriginalSpeakerVolume();
+      processedCaptionIdsRef.current.clear();
+      skipCurrentSnapshotRef.current = true;
     };
   }, [voiceTranslationEnabled, audioCaptionsEnabled]);
+
+  useEffect(() => {
+    if (!voiceTranslationEnabled || !audioCaptionsEnabled) {
+      previousCaptionLocaleRef.current = captionLocale;
+      return;
+    }
+
+    if (captionLocale !== previousCaptionLocaleRef.current) {
+      clearTTSQueue();
+      stopTTSAudio();
+      restoreOriginalSpeakerVolume();
+      processedCaptionIdsRef.current.clear();
+      skipCurrentSnapshotRef.current = true;
+
+      logger.info({
+        logCode: 'tts_locale_changed',
+        extraInfo: { locale: captionLocale },
+      }, 'Voice Translation locale changed');
+    }
+
+    previousCaptionLocaleRef.current = captionLocale;
+  }, [captionLocale, voiceTranslationEnabled, audioCaptionsEnabled]);
 
   // Apply volume changes when sliders are adjusted
   useEffect(() => {
