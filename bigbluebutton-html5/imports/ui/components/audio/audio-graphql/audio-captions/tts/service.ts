@@ -29,10 +29,19 @@ interface TTSResponse {
   error?: string;
 }
 
+interface TTSQueueItem {
+  text: string;
+  locale: string;
+  resolve: (success: boolean) => void;
+}
+
 // Audio playback state
 let currentAudioSource: AudioBufferSourceNode | null = null;
 let audioContext: AudioContext | null = null;
 let isPlaying = false;
+let ttsQueue: TTSQueueItem[] = [];
+let playbackSessionId = 0;
+let activeProcessingSessionId: number | null = null;
 
 // Volume control state
 let ttsGainNode: GainNode | null = null;
@@ -51,10 +60,22 @@ const getAudioContext = (): AudioContext => {
   return audioContext;
 };
 
+const resolveQueuedItems = (items: TTSQueueItem[], success: boolean): void => {
+  items.forEach((item) => item.resolve(success));
+};
+
+const restoreOriginalSpeakerVolumeIfIdle = (): void => {
+  if (!isPlaying && ttsQueue.length === 0 && activeProcessingSessionId === null) {
+    restoreOriginalSpeakerVolume();
+  }
+};
+
 /**
  * Stops any currently playing TTS audio
  */
 export const stopTTSAudio = (): void => {
+  playbackSessionId += 1;
+  activeProcessingSessionId = null;
   if (currentAudioSource) {
     try {
       currentAudioSource.stop();
@@ -65,6 +86,12 @@ export const stopTTSAudio = (): void => {
     currentAudioSource = null;
   }
   isPlaying = false;
+};
+
+export const clearTTSQueue = (): void => {
+  const pendingItems = ttsQueue.splice(0);
+  resolveQueuedItems(pendingItems, false);
+  restoreOriginalSpeakerVolumeIfIdle();
 };
 
 /**
@@ -193,7 +220,10 @@ const fetchTTSAudio = async (text: string, locale: string): Promise<ArrayBuffer 
 /**
  * Plays audio buffer using Web Audio API with volume control
  */
-const playAudioBuffer = async (audioBuffer: ArrayBuffer): Promise<void> => {
+const playAudioBuffer = async (
+  audioBuffer: ArrayBuffer,
+  sessionId: number,
+): Promise<boolean> => {
   const ctx = getAudioContext();
 
   // Resume context if suspended (due to browser autoplay policies)
@@ -203,9 +233,9 @@ const playAudioBuffer = async (audioBuffer: ArrayBuffer): Promise<void> => {
 
   // Decode audio data
   const decodedAudio = await ctx.decodeAudioData(audioBuffer);
-
-  // Stop any currently playing audio
-  stopTTSAudio();
+  if (sessionId !== playbackSessionId) {
+    return false;
+  }
 
   // Create GainNode for volume control if needed
   if (!ttsGainNode || ttsGainNode.context !== ctx) {
@@ -223,17 +253,77 @@ const playAudioBuffer = async (audioBuffer: ArrayBuffer): Promise<void> => {
   currentAudioSource = source;
   isPlaying = true;
 
-  source.onended = () => {
-    isPlaying = false;
-    currentAudioSource = null;
-  };
+  return new Promise<boolean>((resolve) => {
+    source.onended = () => {
+      isPlaying = false;
+      if (currentAudioSource === source) {
+        currentAudioSource = null;
+      }
+      resolve(sessionId === playbackSessionId);
+    };
 
-  source.start(0);
+    source.start(0);
+  });
+};
+
+const processQueue = async (sessionId: number): Promise<void> => {
+  while (sessionId === playbackSessionId) {
+    const item = ttsQueue.shift();
+
+    if (!item) {
+      break;
+    }
+
+    const audioBuffer = await fetchTTSAudio(item.text, item.locale);
+
+    if (sessionId !== playbackSessionId) {
+      item.resolve(false);
+      break;
+    }
+
+    if (!audioBuffer) {
+      item.resolve(false);
+      continue;
+    }
+
+    try {
+      const played = await playAudioBuffer(audioBuffer, sessionId);
+      item.resolve(played && sessionId === playbackSessionId);
+    } catch (error) {
+      logger.error({
+        logCode: 'tts_play_error',
+        extraInfo: { errorMessage: (error as Error).message },
+      }, 'Failed to play TTS audio');
+      item.resolve(false);
+    }
+  }
+
+  if (activeProcessingSessionId === sessionId) {
+    activeProcessingSessionId = null;
+  }
+
+  restoreOriginalSpeakerVolumeIfIdle();
+};
+
+const startQueueProcessing = (): void => {
+  if (ttsQueue.length === 0) {
+    restoreOriginalSpeakerVolumeIfIdle();
+    return;
+  }
+
+  if (activeProcessingSessionId === playbackSessionId) {
+    return;
+  }
+
+  const sessionId = playbackSessionId;
+  activeProcessingSessionId = sessionId;
+
+  void processQueue(sessionId);
 };
 
 /**
  * Main function to speak text using TTS
- * Handles fetching, muting original speaker, and playback
+ * Handles queueing, muting original speaker, and playback
  */
 export const speakText = async (text: string, locale: string): Promise<boolean> => {
   if (!text.trim()) {
@@ -245,38 +335,28 @@ export const speakText = async (text: string, locale: string): Promise<boolean> 
     extraInfo: { text: text.substring(0, 50), locale },
   }, 'TTS speak request');
 
-  // Stop any previous TTS audio (interruption)
-  stopTTSAudio();
+  setOriginalSpeakerMuted(true);
 
-  // Fetch audio from server
-  const audioBuffer = await fetchTTSAudio(text, locale);
+  return new Promise<boolean>((resolve) => {
+    ttsQueue.push({
+      text,
+      locale,
+      resolve: (success) => {
+        if (success) {
+          logger.info({ logCode: 'tts_speak_success' }, 'TTS audio playing');
+        }
+        resolve(success);
+      },
+    });
 
-  if (!audioBuffer) {
-    return false;
-  }
-
-  try {
-    // Mute original speaker
-    setOriginalSpeakerMuted(true);
-
-    // Play the TTS audio
-    await playAudioBuffer(audioBuffer);
-
-    logger.info({ logCode: 'tts_speak_success' }, 'TTS audio playing');
-    return true;
-  } catch (error) {
-    logger.error({
-      logCode: 'tts_play_error',
-      extraInfo: { errorMessage: (error as Error).message },
-    }, 'Failed to play TTS audio');
-    return false;
-  }
+    startQueueProcessing();
+  });
 };
 
 /**
  * Checks if TTS is currently playing
  */
-export const isTTSPlaying = (): boolean => isPlaying;
+export const isTTSPlaying = (): boolean => isPlaying || ttsQueue.length > 0;
 
 /**
  * Checks if TTS service is available
@@ -297,6 +377,7 @@ export const checkTTSAvailability = async (): Promise<boolean> => {
 export default {
   speakText,
   stopTTSAudio,
+  clearTTSQueue,
   setOriginalSpeakerMuted,
   setOriginalSpeakerVolumeValue,
   updateOriginalSpeakerVolume,
