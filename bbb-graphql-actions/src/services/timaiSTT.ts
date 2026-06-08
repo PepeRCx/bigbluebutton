@@ -24,10 +24,10 @@ const FRAME_DURATION_MS = 20;
 export const SUPPORTED_STT_LANGUAGES: Record<string, string> = BBB_TO_TIMAI_LANGUAGE;
 
 export interface STTSessionCallbacks {
-  onRecognized: (text: string, resultId: string) => void;
-  onError: (error: string) => void;
-  onSessionStarted: () => void;
-  onSessionStopped: () => void;
+  onRecognized: (text: string, resultId: string) => void | Promise<void>;
+  onError: (error: string) => void | Promise<void>;
+  onSessionStarted: () => void | Promise<void>;
+  onSessionStopped: () => void | Promise<void>;
 }
 
 export interface STTSession {
@@ -61,6 +61,10 @@ interface AudioGateMetrics {
 interface AudioGateResult extends AudioGateMetrics {
   passed: boolean;
   reason?: string;
+}
+
+interface FlushAudioOptions {
+  allowShortChunk?: boolean;
 }
 
 function int16ToWav(samples: Int16Array, sampleRate: number): Buffer {
@@ -118,7 +122,51 @@ function roundMetric(value: number): string {
   return value.toFixed(3);
 }
 
-function analyzeAudioChunk(samples: Int16Array, sampleRate: number): AudioGateResult {
+function normalizeTranscript(text: string): string {
+  return text.trim().replace(/\s+/g, ' ');
+}
+
+function mergeTranscript(existingTranscript: string, nextTranscript: string): string {
+  const existing = normalizeTranscript(existingTranscript);
+  const next = normalizeTranscript(nextTranscript);
+
+  if (!existing) {
+    return next;
+  }
+
+  if (!next) {
+    return existing;
+  }
+
+  if (existing === next || existing.endsWith(next)) {
+    return existing;
+  }
+
+  if (next.startsWith(existing)) {
+    return next;
+  }
+
+  const existingWords = existing.split(' ');
+  const nextWords = next.split(' ');
+  const maxOverlap = Math.min(existingWords.length, nextWords.length);
+
+  for (let overlap = maxOverlap; overlap > 0; overlap -= 1) {
+    const existingSuffix = existingWords.slice(-overlap).join(' ');
+    const nextPrefix = nextWords.slice(0, overlap).join(' ');
+
+    if (existingSuffix === nextPrefix) {
+      return `${existingWords.join(' ')} ${nextWords.slice(overlap).join(' ')}`.trim();
+    }
+  }
+
+  return `${existing} ${next}`.trim();
+}
+
+function analyzeAudioChunk(
+  samples: Int16Array,
+  sampleRate: number,
+  allowShortChunk: boolean = false,
+): AudioGateResult {
   const totalDurationMs = (samples.length / sampleRate) * 1000;
 
   if (samples.length === 0) {
@@ -138,7 +186,7 @@ function analyzeAudioChunk(samples: Int16Array, sampleRate: number): AudioGateRe
   }
 
   const chunkRms = Math.sqrt(sumSquares / samples.length);
-  if (totalDurationMs < TIMAI_STT_MIN_CHUNK_MS) {
+  if (totalDurationMs < TIMAI_STT_MIN_CHUNK_MS && !allowShortChunk) {
     return {
       passed: false,
       reason: 'short_chunk',
@@ -215,10 +263,26 @@ export function createSTTSession(
   let isStopped = false;
   let isProcessing = false;
   let sequence = 0;
+  let bufferedTranscript = '';
 
   callbacks.onSessionStarted();
 
-  async function flushAudio() {
+  async function finalizeBufferedTranscript(reason: string): Promise<void> {
+    const finalTranscript = normalizeTranscript(bufferedTranscript);
+
+    if (!finalTranscript) {
+      return;
+    }
+
+    sequence += 1;
+    const resultId = `timai-${Date.now()}-${sequence}`;
+    bufferedTranscript = '';
+
+    console.info(`[TimAI-STT] Finalized utterance [${sequence}] (${reason}): "${finalTranscript.substring(0, 80)}"`);
+    await callbacks.onRecognized(finalTranscript, resultId);
+  }
+
+  async function flushAudio(options: FlushAudioOptions = {}) {
     if (isStopped || isProcessing || audioBuffer.length === 0) {
       return;
     }
@@ -229,12 +293,17 @@ export function createSTTSession(
     audioBuffer = new Int16Array(0);
 
     try {
-      const gateResult = analyzeAudioChunk(samples, SAMPLE_RATE);
+      const gateResult = analyzeAudioChunk(
+        samples,
+        SAMPLE_RATE,
+        options.allowShortChunk ?? false,
+      );
       if (!gateResult.passed) {
         console.info(
           `[TimAI-STT] Skipping chunk: reason=${gateResult.reason} totalMs=${Math.round(gateResult.totalDurationMs)} `
           + `voicedMs=${Math.round(gateResult.voicedDurationMs)} chunkRms=${roundMetric(gateResult.chunkRms)}`,
         );
+        await finalizeBufferedTranscript(gateResult.reason || 'audio_gate');
         return;
       }
 
@@ -262,13 +331,13 @@ export function createSTTSession(
       }
 
       const result = await response.json();
-      const text = result.text;
+      const text = normalizeTranscript(result.text || '');
 
-      if (text && text.trim()) {
-        sequence += 1;
-        const resultId = `timai-${Date.now()}-${sequence}`;
-        console.info(`[TimAI-STT] Transcription [${sequence}]: "${text.substring(0, 50)}"`);
-        callbacks.onRecognized(text.trim(), resultId);
+      if (text) {
+        bufferedTranscript = mergeTranscript(bufferedTranscript, text);
+        console.info(`[TimAI-STT] Buffered chunk: "${text.substring(0, 80)}"`);
+      } else {
+        await finalizeBufferedTranscript('empty_result');
       }
     } catch (error) {
       console.error('[TimAI-STT] Transcription request failed:', error);
@@ -302,7 +371,10 @@ export function createSTTSession(
         return;
       }
       clearInterval(interval);
-      await flushAudio();
+      if (audioBuffer.length > 0) {
+        await flushAudio({ allowShortChunk: true });
+      }
+      await finalizeBufferedTranscript('end_stream');
     },
 
     stop: () => {
