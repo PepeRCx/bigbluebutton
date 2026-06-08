@@ -32,7 +32,10 @@ export const GET_CAPTIONS = gql`
     caption(where: {
       locale: {_eq: $locale},
       userId: {_neq: $excludeUserId}
-    }) {
+    }, order_by: [
+      {createdAt: asc},
+      {captionId: asc}
+    ]) {
       user {
         avatar
         color
