@@ -12,8 +12,10 @@ import { IncomingMessage } from 'http';
 import { URL } from 'url';
 import { RedisClientType } from 'redis';
 import {
+  TRANSLATION_PROVIDER,
   TIMAI_STT_DUPLICATE_MAX_WORDS,
   TIMAI_STT_DUPLICATE_WINDOW_MS,
+  TIMAI_STT_REPETITION_THRESHOLD,
 } from '../config';
 import {
   createSTTSession,
@@ -21,7 +23,8 @@ import {
   isLocaleSupported,
   STTSession,
 } from '../services/timaiSTT';
-import { translateToAllLanguages, getSupportedLocales, isTranslationEnabled } from '../services/translationService';
+import { getTargetLocales } from '../services/meetingCaptionDemand';
+import { translateText, getSupportedLocales, isTranslationEnabled } from '../services/translationService';
 
 const DUPLICATE_MAX_CHARS = 32;
 
@@ -51,10 +54,58 @@ function getWordCount(transcript: string): number {
   return transcript ? transcript.split(' ').length : 0;
 }
 
-function shouldSuppressDuplicate(connection: STTConnection, transcript: string): boolean {
+function hasConsecutiveRepetition(transcript: string, minConsecutive: number = 3): boolean {
+  const words = normalizeTranscript(transcript).split(' ');
+  if (words.length < minConsecutive) {
+    return false;
+  }
+
+  let consecutive = 1;
+  for (let i = 1; i < words.length; i += 1) {
+    if (words[i] === words[i - 1]) {
+      consecutive += 1;
+      if (consecutive >= minConsecutive) {
+        return true;
+      }
+    } else {
+      consecutive = 1;
+    }
+  }
+
+  return false;
+}
+
+function hasExcessiveWordRepetition(
+  transcript: string,
+  threshold: number = TIMAI_STT_REPETITION_THRESHOLD,
+): boolean {
+  const words = normalizeTranscript(transcript).split(' ');
+  if (words.length < 4) {
+    return false;
+  }
+
+  const wordFrequency = new Map<string, number>();
+  words.forEach((word) => {
+    wordFrequency.set(word, (wordFrequency.get(word) || 0) + 1);
+  });
+
+  const maxFrequency = Math.max(...wordFrequency.values());
+  return maxFrequency / words.length > threshold;
+}
+
+function shouldSuppressTranscript(connection: STTConnection, transcript: string): boolean {
   const normalizedTranscript = normalizeTranscript(transcript);
   if (!normalizedTranscript) {
     return false;
+  }
+
+  // Suppress obvious degenerate repetitions such as "hello hello hello".
+  if (hasConsecutiveRepetition(transcript, 3)) {
+    return true;
+  }
+
+  if (hasExcessiveWordRepetition(transcript)) {
+    return true;
   }
 
   const wordCount = getWordCount(normalizedTranscript);
@@ -132,7 +183,16 @@ async function publishTranslations(
   }
 
   try {
-    const translations = await translateToAllLanguages(transcript, sourceLocale);
+    const targetLocales = TRANSLATION_PROVIDER === 'tim-ai'
+      ? await getTargetLocales(meetingId, sourceLocale, supportedLocales)
+      : supportedLocales.filter((locale) => locale !== sourceLocale);
+
+    if (targetLocales.length === 0) {
+      console.info(`[TimAI-STTHandler] Translation skipped: no demanded target locales for meetingId=${meetingId}`);
+      return;
+    }
+
+    const translations = await translateText(transcript, sourceLocale, targetLocales);
 
     for (const translation of translations) {
       const translatedTranscriptId = `${baseTranscriptId}-${translation.locale}`;
@@ -197,11 +257,38 @@ function handleConnection(
   connections.set(ws, connection);
 
   const session = createSTTSession(locale, {
+    onRecognizing: async (text, resultId) => {
+      const transcriptId = connection.currentTranscriptId;
+
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+          type: 'interim',
+          text,
+          transcriptId,
+          locale,
+        }));
+      }
+
+      try {
+        await publishTranscript(
+          redisClient,
+          meetingId,
+          moderatorUserId,
+          transcriptId,
+          text,
+          locale,
+          false
+        );
+      } catch (error) {
+        console.error('[TimAI-STTHandler] Failed to publish interim transcript:', error);
+      }
+    },
+
     onRecognized: async (text, resultId) => {
       const normalizedTranscript = normalizeTranscript(text);
       const transcriptId = connection.currentTranscriptId;
 
-      if (shouldSuppressDuplicate(connection, text)) {
+      if (shouldSuppressTranscript(connection, text)) {
         console.info(
           `[TimAI-STTHandler] Suppressed duplicate transcript for senderUserId=${senderUserId} `
           + `locale=${locale} text="${normalizedTranscript}"`,
