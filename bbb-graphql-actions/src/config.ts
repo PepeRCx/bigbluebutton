@@ -6,6 +6,11 @@ export const REDIS_PORT = Number(process.env.BBB_REDIS_PORT) || 6379;
 export const SERVER_HOST = process.env.SERVER_HOST || '127.0.0.1';
 export const SERVER_PORT = Number(process.env.SERVER_PORT) || 8093;
 export const MAX_BODY_SIZE = Number(process.env.MAX_BODY_SIZE) || 10485760; // 10MB
+export const BBB_GRAPHQL_DB_HOST = process.env.BBB_GRAPHQL_DB_HOST || '127.0.0.1';
+export const BBB_GRAPHQL_DB_PORT = Number(process.env.BBB_GRAPHQL_DB_PORT) || 5432;
+export const BBB_GRAPHQL_DB_NAME = process.env.BBB_GRAPHQL_DB_NAME || 'bbb_graphql';
+export const BBB_GRAPHQL_DB_USER = process.env.BBB_GRAPHQL_DB_USER || 'bbb_hasura';
+export const BBB_GRAPHQL_DB_PASSWORD = process.env.BBB_GRAPHQL_DB_PASSWORD || 'bbb_hasura';
 export const DEBUG = false;
 
 // Load BigBlueButton properties
@@ -51,6 +56,7 @@ const parseNumberConfig = (
     options: {
         integer?: boolean;
         min?: number;
+        max?: number;
     } = {},
 ): number => {
     if (rawValue === undefined || rawValue === '') {
@@ -58,7 +64,7 @@ const parseNumberConfig = (
     }
 
     const parsedValue = Number(rawValue);
-    const { integer = false, min } = options;
+    const { integer = false, min, max } = options;
 
     if (!Number.isFinite(parsedValue)) {
         console.warn(`[Config] Invalid numeric value for ${name}: "${rawValue}". Falling back to ${defaultValue}.`);
@@ -75,6 +81,11 @@ const parseNumberConfig = (
         return defaultValue;
     }
 
+    if (max !== undefined && parsedValue > max) {
+        console.warn(`[Config] Value for ${name} must be <= ${max}. Falling back to ${defaultValue}.`);
+        return defaultValue;
+    }
+
     return parsedValue;
 };
 
@@ -83,6 +94,11 @@ if (Object.keys(bbbProperties).length > 0) {
 } else {
     console.warn(`[Config] No properties loaded from ${PROPERTIES_FILE}. Ensure the file exists and is readable.`);
 }
+
+console.info(
+    `[Config] BBB GraphQL DB bootstrap: host=${BBB_GRAPHQL_DB_HOST} port=${BBB_GRAPHQL_DB_PORT} `
+    + `database=${BBB_GRAPHQL_DB_NAME} user=${BBB_GRAPHQL_DB_USER}`,
+);
 
 // Azure Translator Configuration
 export const AZURE_TRANSLATOR_ENABLED = process.env.AZURE_TRANSLATOR_ENABLED !== 'false'
@@ -212,6 +228,27 @@ export const TIMAI_STT_DUPLICATE_MAX_WORDS = parseNumberConfig(
     { integer: true, min: 0 },
 );
 
+export const TIMAI_STT_CHUNK_DURATION_MS = parseNumberConfig(
+    'timai.stt.chunkDurationMs',
+    process.env.TIMAI_STT_CHUNK_DURATION_MS || bbbProperties['timai.stt.chunkDurationMs'],
+    2000,
+    { integer: true, min: 100 },
+);
+
+export const TIMAI_STT_INTERIM_INTERVAL_MS = parseNumberConfig(
+    'timai.stt.interimIntervalMs',
+    process.env.TIMAI_STT_INTERIM_INTERVAL_MS || bbbProperties['timai.stt.interimIntervalMs'],
+    500,
+    { integer: true, min: 100 },
+);
+
+export const TIMAI_STT_REPETITION_THRESHOLD = parseNumberConfig(
+    'timai.stt.repetitionThreshold',
+    process.env.TIMAI_STT_REPETITION_THRESHOLD || bbbProperties['timai.stt.repetitionThreshold'],
+    0.6,
+    { min: 0, max: 1 },
+);
+
 if (TIMAI_STT_ENABLED) {
     console.info('[Config] Tim AI STT enabled.');
     console.info(`[Config] Tim AI STT URL: ${TIMAI_STT_URL}`);
@@ -222,6 +259,10 @@ if (TIMAI_STT_ENABLED) {
     console.info(
         `[Config] Tim AI STT duplicate suppression: duplicateWindowMs=${TIMAI_STT_DUPLICATE_WINDOW_MS}, `
         + `duplicateMaxWords=${TIMAI_STT_DUPLICATE_MAX_WORDS}`,
+    );
+    console.info(
+        `[Config] Tim AI STT streaming: chunkDurationMs=${TIMAI_STT_CHUNK_DURATION_MS}, `
+        + `interimIntervalMs=${TIMAI_STT_INTERIM_INTERVAL_MS}`,
     );
 } else {
     console.info('[Config] Tim AI STT is disabled.');
