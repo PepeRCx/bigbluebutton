@@ -61,6 +61,8 @@ fi
 
 sudo mv -f dist/index.js dist/bbb-graphql-actions.js
 sudo cp -rf dist/* /usr/local/bigbluebutton/bbb-graphql-actions
+sudo cp -f package.json package-lock.json /usr/local/bigbluebutton/bbb-graphql-actions/
+sudo npm ci --no-progress --omit=dev --prefix /usr/local/bigbluebutton/bbb-graphql-actions
 verify_ws_artifact "deployed" \
     "/usr/local/bigbluebutton/bbb-graphql-actions/bbb-graphql-actions.js" \
     "/usr/local/bigbluebutton/bbb-graphql-actions/websocket/timaiSttHandler.js"
