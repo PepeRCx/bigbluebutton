@@ -1,12 +1,14 @@
+import { TRANSLATION_PROVIDER } from '../config';
 import { RedisMessage, RedisMessageOrArray } from '../types';
 import { throwErrorIfInvalidInput } from "../imports/validation";
-import { translateToAllLanguages, getSupportedLocales, isTranslationEnabled } from '../services/translationService';
+import { getTargetLocales } from '../services/meetingCaptionDemand';
+import { translateText, getSupportedLocales, isTranslationEnabled } from '../services/translationService';
 
 /**
  * Builds Redis message(s) for caption submission.
  *
  * When translation is enabled and the caption is final (isFinal=true),
- * this will translate the transcript to all supported languages and return
+ * this will translate the transcript to the current target locales and return
  * multiple messages - one for the original caption and one for each translation.
  */
 export default async function buildRedisMessage(
@@ -68,8 +70,15 @@ export default async function buildRedisMessage(
     return originalMessage;
   }
 
-  // Translate to all other supported languages
-  const translations = await translateToAllLanguages(transcript, sourceLocale);
+  const targetLocales = TRANSLATION_PROVIDER === 'tim-ai'
+    ? await getTargetLocales(meetingId, sourceLocale, supportedLocales)
+    : supportedLocales.filter((locale) => locale !== sourceLocale);
+
+  if (targetLocales.length === 0) {
+    return originalMessage;
+  }
+
+  const translations = await translateText(transcript, sourceLocale, targetLocales);
 
   if (translations.length === 0) {
     return originalMessage;
