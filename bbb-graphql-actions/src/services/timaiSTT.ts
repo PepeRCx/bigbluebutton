@@ -15,6 +15,9 @@ import {
   TIMAI_STT_MIN_CHUNK_MS,
   TIMAI_STT_MIN_VOICED_MS,
   TIMAI_STT_URL,
+  TIMAI_STT_CHUNK_DURATION_MS,
+  TIMAI_STT_INTERIM_INTERVAL_MS,
+  TIMAI_STT_REPETITION_THRESHOLD,
 } from '../config';
 import { BBB_TO_TIMAI_LANGUAGE } from './timaiLocales';
 
@@ -24,6 +27,7 @@ const FRAME_DURATION_MS = 20;
 export const SUPPORTED_STT_LANGUAGES: Record<string, string> = BBB_TO_TIMAI_LANGUAGE;
 
 export interface STTSessionCallbacks {
+  onRecognizing: (text: string, resultId: string) => void | Promise<void>;
   onRecognized: (text: string, resultId: string) => void | Promise<void>;
   onError: (error: string) => void | Promise<void>;
   onSessionStarted: () => void | Promise<void>;
@@ -124,6 +128,52 @@ function roundMetric(value: number): string {
 
 function normalizeTranscript(text: string): string {
   return text.trim().replace(/\s+/g, ' ');
+}
+
+function getWordCount(transcript: string): number {
+  return transcript ? transcript.split(' ').length : 0;
+}
+
+function hasConsecutiveRepetition(words: string[], minConsecutive: number = 3): boolean {
+  if (words.length < minConsecutive) {
+    return false;
+  }
+
+  let consecutive = 1;
+  for (let i = 1; i < words.length; i += 1) {
+    if (words[i].toLowerCase() === words[i - 1].toLowerCase()) {
+      consecutive += 1;
+      if (consecutive >= minConsecutive) {
+        return true;
+      }
+    } else {
+      consecutive = 1;
+    }
+  }
+
+  return false;
+}
+
+function isRepetitiveTranscript(transcript: string, threshold: number = TIMAI_STT_REPETITION_THRESHOLD): boolean {
+  const normalized = normalizeTranscript(transcript);
+  const words = normalized.split(' ');
+
+  if (words.length < 4) {
+    return false;
+  }
+
+  if (hasConsecutiveRepetition(words, 3)) {
+    return true;
+  }
+
+  const wordFrequency = new Map<string, number>();
+  words.forEach((word) => {
+    const lower = word.toLowerCase();
+    wordFrequency.set(lower, (wordFrequency.get(lower) || 0) + 1);
+  });
+
+  const maxFrequency = Math.max(...wordFrequency.values());
+  return maxFrequency / words.length > threshold;
 }
 
 function mergeTranscript(existingTranscript: string, nextTranscript: string): string {
@@ -258,14 +308,32 @@ export function createSTTSession(
   console.info(`[TimAI-STT] Creating STT session for locale: ${locale} (OmniVoice: ${omniVoiceLang})`);
 
   const SAMPLE_RATE = 16000;
-  const CHUNK_DURATION_MS = 2000;
+  const CHUNK_DURATION_MS = TIMAI_STT_CHUNK_DURATION_MS;
   let audioBuffer = new Int16Array(0);
   let isStopped = false;
   let isProcessing = false;
   let sequence = 0;
   let bufferedTranscript = '';
+  let lastInterimTranscript = '';
+  let interimSequence = 0;
 
   callbacks.onSessionStarted();
+
+  async function emitInterim(): Promise<void> {
+    if (isStopped) {
+      return;
+    }
+
+    const interimTranscript = normalizeTranscript(bufferedTranscript);
+    if (!interimTranscript || interimTranscript === lastInterimTranscript) {
+      return;
+    }
+
+    interimSequence += 1;
+    const resultId = `timai-interim-${Date.now()}-${interimSequence}`;
+    lastInterimTranscript = interimTranscript;
+    await callbacks.onRecognizing(interimTranscript, resultId);
+  }
 
   async function finalizeBufferedTranscript(reason: string): Promise<void> {
     const finalTranscript = normalizeTranscript(bufferedTranscript);
@@ -333,9 +401,15 @@ export function createSTTSession(
       const result = await response.json();
       const text = normalizeTranscript(result.text || '');
 
+      if (isRepetitiveTranscript(text)) {
+        console.warn(`[TimAI-STT] Discarding repetitive transcript: "${text.substring(0, 80)}"`);
+        return;
+      }
+
       if (text) {
         bufferedTranscript = mergeTranscript(bufferedTranscript, text);
         console.info(`[TimAI-STT] Buffered chunk: "${text.substring(0, 80)}"`);
+        await emitInterim();
       } else {
         await finalizeBufferedTranscript('empty_result');
       }
@@ -352,6 +426,12 @@ export function createSTTSession(
       flushAudio();
     }
   }, CHUNK_DURATION_MS);
+
+  const interimInterval = setInterval(() => {
+    if (!isStopped && !isProcessing) {
+      void emitInterim();
+    }
+  }, TIMAI_STT_INTERIM_INTERVAL_MS);
 
   return {
     pushAudio: (audioData: Buffer) => {
@@ -371,6 +451,7 @@ export function createSTTSession(
         return;
       }
       clearInterval(interval);
+      clearInterval(interimInterval);
       if (audioBuffer.length > 0) {
         await flushAudio({ allowShortChunk: true });
       }
@@ -381,6 +462,7 @@ export function createSTTSession(
       if (!isStopped) {
         isStopped = true;
         clearInterval(interval);
+        clearInterval(interimInterval);
         callbacks.onSessionStopped();
       }
     },
