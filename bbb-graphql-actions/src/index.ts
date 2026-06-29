@@ -8,6 +8,7 @@ import { createRedisClient } from './imports/redis';
 import { ValidationError } from './types/ValidationError';
 import { synthesizeSpeech, isAzureTTSEnabled } from './services/azureTTS';
 import { isAzureSTTEnabled } from './services/azureSpeechToText';
+import { syncMeetingCaptionDemandFromAction } from './services/meetingCaptionDemand';
 import { initializeSTTWebSocket, getActiveConnectionCount } from './websocket/sttHandler';
 import { synthesizeSpeech as timaiSynthesizeSpeech, isTimAITtsEnabled } from './services/timaiTTS';
 import { isTimAISttEnabled } from './services/timaiSTT';
@@ -100,6 +101,8 @@ app.post('/', async (req: Request, res: Response) => {
         await redisClient.publish('to-akka-apps-redis-channel', JSON.stringify(redisPayload));
       }
     }
+
+    syncMeetingCaptionDemandFromAction(actionName, sessionVariables, input);
 
     // Send a success response.
     res.status(200).json(true);
