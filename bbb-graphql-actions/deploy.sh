@@ -46,9 +46,7 @@ do
     fi
 done
 
-if [ ! -d ./node_modules ] ; then
-  sudo npm ci --no-progress
-fi
+sudo npm ci --no-progress
 
 sudo npm run build
 verify_ws_artifact "built" "dist/index.js" "dist/websocket/timaiSttHandler.js"
