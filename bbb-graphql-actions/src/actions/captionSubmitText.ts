@@ -1,4 +1,3 @@
-import { TRANSLATION_PROVIDER } from '../config';
 import { RedisMessage, RedisMessageOrArray } from '../types';
 import { throwErrorIfInvalidInput } from "../imports/validation";
 import { getTargetLocales } from '../services/meetingCaptionDemand';
@@ -70,9 +69,7 @@ export default async function buildRedisMessage(
     return originalMessage;
   }
 
-  const targetLocales = TRANSLATION_PROVIDER === 'tim-ai'
-    ? await getTargetLocales(meetingId, sourceLocale, supportedLocales)
-    : supportedLocales.filter((locale) => locale !== sourceLocale);
+  const targetLocales = await getTargetLocales(meetingId, sourceLocale, supportedLocales);
 
   if (targetLocales.length === 0) {
     return originalMessage;
