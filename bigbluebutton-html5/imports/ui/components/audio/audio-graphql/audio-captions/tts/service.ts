@@ -66,7 +66,7 @@ const resolveQueuedItems = (items: TTSQueueItem[], success: boolean): void => {
 
 const restoreOriginalSpeakerVolumeIfIdle = (): void => {
   if (!isPlaying && ttsQueue.length === 0 && activeProcessingSessionId === null) {
-    restoreOriginalSpeakerVolume();
+    setOriginalSpeakerVolumeValue(currentOriginalSpeakerVolume);
   }
 };
 

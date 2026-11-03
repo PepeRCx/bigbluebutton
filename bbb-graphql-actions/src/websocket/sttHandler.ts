@@ -15,7 +15,9 @@ import {
   isLocaleSupported,
   STTSession,
 } from '../services/azureSpeechToText';
-import { translateToAllLanguages, getSupportedLocales, isTranslationEnabled } from '../services/translationService';
+import { TRANSLATION_PROVIDER } from '../config';
+import { getTargetLocales } from '../services/meetingCaptionDemand';
+import { translateText, getSupportedLocales, isTranslationEnabled } from '../services/translationService';
 
 interface STTConnection {
   ws: WebSocket;
@@ -102,7 +104,16 @@ async function publishTranslations(
   }
 
   try {
-    const translations = await translateToAllLanguages(transcript, sourceLocale);
+    const targetLocales = TRANSLATION_PROVIDER === 'azure'
+      ? await getTargetLocales(meetingId, sourceLocale, supportedLocales)
+      : supportedLocales.filter((locale) => locale !== sourceLocale);
+
+    if (targetLocales.length === 0) {
+      console.info(`[STTHandler] Translation skipped: no demanded target locales for meetingId=${meetingId}`);
+      return;
+    }
+
+    const translations = await translateText(transcript, sourceLocale, targetLocales);
 
     for (const translation of translations) {
       const translatedTranscriptId = `${baseTranscriptId}-${translation.locale}`;
