@@ -209,6 +209,7 @@ const VoiceTranslationButton: React.FC<VoiceTranslationButtonProps> = ({
         )}
         actions={getMenuActions()}
         renderOtherComponents={renderVolumeControls()}
+        renderOtherComponentsBefore="translateToHeader"
         opts={{
           id: 'voice-translation-dropdown-menu',
           keepMounted: true,

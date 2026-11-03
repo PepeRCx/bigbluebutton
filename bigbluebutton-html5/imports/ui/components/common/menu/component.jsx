@@ -220,11 +220,13 @@ class BBBMenu extends React.Component {
     const {
       trigger,
       intl,
+      actions,
       customStyles,
       dataTest,
       opts,
       accessKey,
       renderOtherComponents,
+      renderOtherComponentsBefore,
       customAnchorEl,
       hasRoundedCorners,
       overrideMobileStyles,
@@ -232,6 +234,15 @@ class BBBMenu extends React.Component {
       minContent,
     } = this.props;
     const actionsItems = this.makeMenuItems();
+    const renderOtherComponentsBeforeIndex = actions?.findIndex(
+      (action) => action.key === renderOtherComponentsBefore,
+    ) ?? -1;
+    const actionsWithOtherComponents = actionsItems.map((items, index) => (
+      <React.Fragment key={actions[index]?.key || index}>
+        {index === renderOtherComponentsBeforeIndex && renderOtherComponents}
+        {items}
+      </React.Fragment>
+    ));
 
     const roundedCornersStyles = { borderRadius: '3rem' };
     let menuStyles = { zIndex: 999 };
@@ -288,8 +299,8 @@ class BBBMenu extends React.Component {
             className: overrideMobileStyles ? 'override-mobile-styles' : 'MuiPaper-root-mobile',
           }}
         >
-          {actionsItems}
-          {renderOtherComponents}
+          {actionsWithOtherComponents}
+          {renderOtherComponentsBeforeIndex === -1 && renderOtherComponents}
           {!overrideMobileStyles && anchorEl && window.innerWidth < SMALL_VIEWPORT_BREAKPOINT
             && (
               <Styled.CloseButton
@@ -338,6 +349,7 @@ BBBMenu.propTypes = {
   opts: PropTypes.object,
   accessKey: PropTypes.string,
   minContent: PropTypes.bool,
+  renderOtherComponentsBefore: PropTypes.string,
 };
 
 export default injectIntl(BBBMenu);
