@@ -6,6 +6,7 @@ verify_ws_artifact() {
     local label="$1"
     local entry_file="$2"
     local handler_file="$3"
+    local voice_service_file="$4"
 
     if [[ ! -f "$entry_file" ]] ; then
         echo "ERROR: $label entry artifact not found at $entry_file"
@@ -14,6 +15,11 @@ verify_ws_artifact() {
 
     if [[ ! -f "$handler_file" ]] ; then
         echo "ERROR: $label Tim AI STT handler artifact not found at $handler_file"
+        exit 1
+    fi
+
+    if [[ ! -f "$voice_service_file" ]] ; then
+        echo "ERROR: $label Tim AI v2 voice service artifact not found at $voice_service_file"
         exit 1
     fi
 
@@ -29,6 +35,11 @@ verify_ws_artifact() {
 
     if ! grep -Fq "TimAI-STTHandler" "$handler_file" ; then
         echo "ERROR: $label artifact is missing the Tim AI STT handler wiring"
+        exit 1
+    fi
+
+    if ! grep -Fq "timaiVoiceTranslate" "$handler_file" ; then
+        echo "ERROR: $label artifact is missing Tim AI v2 voice translation wiring"
         exit 1
     fi
 
@@ -49,7 +60,10 @@ done
 sudo npm ci --no-progress
 
 sudo npm run build
-verify_ws_artifact "built" "dist/index.js" "dist/websocket/timaiSttHandler.js"
+verify_ws_artifact "built" \
+    "dist/index.js" \
+    "dist/websocket/timaiSttHandler.js" \
+    "dist/services/timaiVoiceTranslate.js"
 
 # handle renaming circa dec 2023
 if [[ -d /usr/local/bigbluebutton/bbb-graphql-actions-adapter-server ]] ; then
@@ -65,7 +79,8 @@ sudo cp -f package.json package-lock.json /usr/local/bigbluebutton/bbb-graphql-a
 sudo npm ci --no-progress --omit=dev --prefix /usr/local/bigbluebutton/bbb-graphql-actions
 verify_ws_artifact "deployed" \
     "/usr/local/bigbluebutton/bbb-graphql-actions/bbb-graphql-actions.js" \
-    "/usr/local/bigbluebutton/bbb-graphql-actions/websocket/timaiSttHandler.js"
+    "/usr/local/bigbluebutton/bbb-graphql-actions/websocket/timaiSttHandler.js" \
+    "/usr/local/bigbluebutton/bbb-graphql-actions/services/timaiVoiceTranslate.js"
 sudo systemctl restart bbb-graphql-actions
 echo ''
 echo ''

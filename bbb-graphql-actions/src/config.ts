@@ -276,10 +276,18 @@ export const TIMAI_TRANSLATE_URL = process.env.TIMAI_TRANSLATE_URL
     || bbbProperties['timai.translate.url']
     || 'ws://localhost:8000/api/v1/translate-stream';
 
+export const TIMAI_VOICE_TRANSLATE_ENABLED = process.env.TIMAI_VOICE_TRANSLATE_ENABLED !== 'false'
+    && (bbbProperties['timai.voiceTranslate.enabled'] !== 'false');
+
+export const TIMAI_VOICE_TRANSLATE_URL = process.env.TIMAI_VOICE_TRANSLATE_URL
+    || bbbProperties['timai.voiceTranslate.url']
+    || 'ws://localhost:8000/api/v1/voice-translate-stream/v2';
+
 if (TIMAI_TRANSLATE_ENABLED) {
     console.info('[Config] Tim AI translation enabled.');
     if (TRANSLATION_PROVIDER === 'tim-ai') {
-        console.info(`[Config] Tim AI translation URL: ${TIMAI_TRANSLATE_URL}`);
+        console.info(`[Config] Tim AI v2 voice translation ${TIMAI_VOICE_TRANSLATE_ENABLED ? 'enabled' : 'disabled'}.`);
+        console.info(`[Config] Tim AI voice translation URL: ${TIMAI_VOICE_TRANSLATE_URL}`);
     }
 } else {
     console.info('[Config] Tim AI translation is disabled.');

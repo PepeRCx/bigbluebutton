@@ -176,8 +176,29 @@ export const restoreOriginalSpeakerVolume = (): void => {
 /**
  * Fetches TTS audio from the server
  */
-const fetchTTSAudio = async (text: string, locale: string): Promise<ArrayBuffer | null> => {
+const TTS_REQUEST_TIMEOUT_MS = 30_000;
+const TTS_RETRY_INITIAL_DELAY_MS = 1_000;
+const TTS_RETRY_MAX_DELAY_MS = 30_000;
+
+const waitForRetry = (delayMs: number): Promise<void> => new Promise((resolve) => {
+  setTimeout(resolve, delayMs);
+});
+
+const fetchTTSAudio = async (
+  text: string,
+  locale: string,
+  sessionId: number,
+  attempt = 0,
+): Promise<ArrayBuffer | null> => {
+  if (sessionId !== playbackSessionId) {
+    return null;
+  }
+
   const endpoint = getTTSEndpoint();
+  let retryable = false;
+  let failureDetail = '';
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), TTS_REQUEST_TIMEOUT_MS);
 
   try {
     const response = await fetch(endpoint, {
@@ -186,35 +207,50 @@ const fetchTTSAudio = async (text: string, locale: string): Promise<ArrayBuffer 
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ text, locale }),
+      signal: controller.signal,
     });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-      logger.error({
-        logCode: 'tts_fetch_error',
-        extraInfo: { status: response.status, error: errorData.error },
-      }, 'Failed to fetch TTS audio');
-      return null;
+      failureDetail = `HTTP ${response.status}: ${errorData.error}`;
+      retryable = response.status === 408 || response.status === 429 || response.status >= 500;
+    } else {
+      const data: TTSResponse = await response.json();
+      if (data.success && data.audio) {
+        const audio = base64ToArrayBuffer(data.audio);
+        if (audio.byteLength > 44) {
+          return audio;
+        }
+        failureDetail = 'TTS returned an empty or incomplete audio payload';
+        retryable = true;
+      } else {
+        failureDetail = data.error || 'TTS response was not successful';
+      }
     }
-
-    const data: TTSResponse = await response.json();
-
-    if (!data.success || !data.audio) {
-      logger.error({
-        logCode: 'tts_response_error',
-        extraInfo: { error: data.error },
-      }, 'TTS response was not successful');
-      return null;
-    }
-
-    return base64ToArrayBuffer(data.audio);
   } catch (error) {
-    logger.error({
-      logCode: 'tts_fetch_exception',
-      extraInfo: { errorMessage: (error as Error).message },
-    }, 'Exception while fetching TTS audio');
+    failureDetail = (error as Error).message || 'TTS request failed';
+    retryable = true;
+  } finally {
+    clearTimeout(timeout);
+  }
+
+  logger.error({
+    logCode: 'tts_fetch_error',
+    extraInfo: {
+      attempt: attempt + 1,
+      retryable,
+      error: failureDetail,
+      locale,
+    },
+  }, retryable ? 'TTS request failed; retrying queued caption' : 'TTS request failed permanently');
+
+  if (!retryable || sessionId !== playbackSessionId) {
     return null;
   }
+
+  const delayMs = Math.min(TTS_RETRY_INITIAL_DELAY_MS * (2 ** attempt), TTS_RETRY_MAX_DELAY_MS);
+  await waitForRetry(delayMs);
+  return fetchTTSAudio(text, locale, sessionId, attempt + 1);
 };
 
 /**
@@ -274,7 +310,7 @@ const processQueue = async (sessionId: number): Promise<void> => {
       break;
     }
 
-    const audioBuffer = await fetchTTSAudio(item.text, item.locale);
+    const audioBuffer = await fetchTTSAudio(item.text, item.locale, sessionId);
 
     if (sessionId !== playbackSessionId) {
       item.resolve(false);

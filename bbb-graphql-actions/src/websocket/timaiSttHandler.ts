@@ -13,6 +13,7 @@ import { URL } from 'url';
 import { RedisClientType } from 'redis';
 import {
   TRANSLATION_PROVIDER,
+  TIMAI_VOICE_TRANSLATE_ENABLED,
   TIMAI_STT_DUPLICATE_MAX_WORDS,
   TIMAI_STT_DUPLICATE_WINDOW_MS,
   TIMAI_STT_REPETITION_THRESHOLD,
@@ -23,6 +24,10 @@ import {
   isLocaleSupported,
   STTSession,
 } from '../services/timaiSTT';
+import {
+  createTimAIVoiceSession,
+  TimAIVoiceSession,
+} from '../services/timaiVoiceTranslate';
 import { getTargetLocales } from '../services/meetingCaptionDemand';
 import { translateText, getSupportedLocales, isTranslationEnabled } from '../services/translationService';
 
@@ -30,7 +35,7 @@ const DUPLICATE_MAX_CHARS = 32;
 
 interface STTConnection {
   ws: WebSocket;
-  session: STTSession | null;
+  session: STTSession | TimAIVoiceSession | null;
   meetingId: string;
   moderatorUserId: string;
   senderUserId: string;
@@ -211,11 +216,11 @@ async function publishTranslations(
   }
 }
 
-function handleConnection(
+async function handleConnection(
   ws: WebSocket,
   req: IncomingMessage,
   redisClient: RedisClientType
-): void {
+): Promise<void> {
   const url = new URL(req.url || '', `http://${req.headers.host}`);
   const meetingId = url.searchParams.get('meetingId');
   const moderatorUserId = url.searchParams.get('moderatorUserId');
@@ -256,7 +261,98 @@ function handleConnection(
 
   connections.set(ws, connection);
 
-  const session = createSTTSession(locale, {
+  let session: STTSession | TimAIVoiceSession | null = null;
+
+  if (
+    TRANSLATION_PROVIDER === 'tim-ai'
+    && TIMAI_VOICE_TRANSLATE_ENABLED
+    && isTranslationEnabled()
+  ) {
+    const allTargetLocales = getSupportedLocales().filter((targetLocale) => targetLocale !== locale);
+    const transcriptIds = new Map<number, string | null>();
+
+    try {
+      session = await createTimAIVoiceSession(locale, allTargetLocales, {
+        onTranscript: async (text, sequence) => {
+          if (transcriptIds.has(sequence)) {
+            return;
+          }
+
+          const normalizedTranscript = normalizeTranscript(text);
+          if (shouldSuppressTranscript(connection, text)) {
+            transcriptIds.set(sequence, null);
+            connection.currentTranscriptId = generateTranscriptId(senderUserId);
+            return;
+          }
+
+          const transcriptId = connection.currentTranscriptId;
+          transcriptIds.set(sequence, transcriptId);
+          connection.currentTranscriptId = generateTranscriptId(senderUserId);
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'final', text, transcriptId, locale }));
+          }
+
+          try {
+            await publishTranscript(
+              redisClient,
+              meetingId,
+              moderatorUserId,
+              transcriptId,
+              text,
+              locale,
+              true,
+            );
+            connection.lastPublishedTranscriptNormalized = normalizedTranscript;
+            connection.lastPublishedTranscriptAt = Date.now();
+          } catch (error) {
+            console.error('[TimAI-STTHandler] Failed to publish v2 transcript:', error);
+          }
+
+        },
+        onTranslation: async (text, targetLocale, sequence) => {
+          const transcriptId = transcriptIds.get(sequence);
+          if (!transcriptId) {
+            return;
+          }
+
+          const demandedLocales = await getTargetLocales(
+            meetingId,
+            locale,
+            getSupportedLocales(),
+          );
+          if (!demandedLocales.includes(targetLocale)) {
+            return;
+          }
+
+          await publishTranscript(
+            redisClient,
+            meetingId,
+            moderatorUserId,
+            `${transcriptId}-${targetLocale}`,
+            text,
+            targetLocale,
+            true,
+          );
+        },
+        onError: (error) => {
+          console.error('[TimAI-STTHandler] Tim AI v2 error:', error);
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'error', error }));
+          }
+        },
+      });
+    } catch (error) {
+      console.error('[TimAI-STTHandler] Failed to connect to Tim AI v2:', error);
+      ws.close(4005, 'Failed to connect to Tim AI v2 voice translation service');
+      connections.delete(ws);
+      return;
+    }
+
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: 'session_started' }));
+    }
+  } else {
+    session = createSTTSession(locale, {
     onRecognizing: async (text, resultId) => {
       const transcriptId = connection.currentTranscriptId;
 
@@ -360,7 +456,8 @@ function handleConnection(
         }));
       }
     },
-  });
+    });
+  }
 
   if (!session) {
     console.error('[TimAI-STTHandler] Failed to create STT session');
@@ -407,7 +504,7 @@ export function initializeTimAISttWebSocket(
   redisClient: RedisClientType
 ): void {
   wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
-    handleConnection(ws, req, redisClient);
+    void handleConnection(ws, req, redisClient);
   });
 
   console.info('[TimAI-STTHandler] WebSocket handler initialized');
